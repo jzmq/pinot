@@ -15,34 +15,25 @@
  */
 package com.linkedin.pinot.controller.helix.core;
 
-import com.linkedin.pinot.common.config.AbstractTableConfig;
-import com.linkedin.pinot.common.config.TableNameBuilder;
-import com.linkedin.pinot.common.metadata.ZKMetadataProvider;
-import com.linkedin.pinot.common.metadata.instance.InstanceZKMetadata;
-import com.linkedin.pinot.common.metadata.stream.KafkaStreamMetadata;
-import com.linkedin.pinot.common.segment.SegmentMetadata;
-import com.linkedin.pinot.common.utils.CommonConstants;
-import com.linkedin.pinot.common.utils.CommonConstants.Helix;
-import com.linkedin.pinot.common.utils.ControllerTenantNameBuilder;
-import com.linkedin.pinot.common.utils.StringUtil;
-import com.linkedin.pinot.controller.helix.core.sharding.SegmentAssignmentStrategy;
-import com.linkedin.pinot.controller.helix.core.sharding.SegmentAssignmentStrategyFactory;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import org.apache.helix.HelixAdmin;
 import org.apache.helix.ZNRecord;
 import org.apache.helix.model.IdealState;
 import org.apache.helix.model.builder.CustomModeISBuilder;
 import org.apache.helix.store.zk.ZkHelixPropertyStore;
-import org.apache.log4j.Logger;
-import org.codehaus.jackson.JsonParseException;
-import org.codehaus.jackson.JsonProcessingException;
-import org.codehaus.jackson.map.JsonMappingException;
-import org.json.JSONException;
 
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import com.linkedin.pinot.common.config.AbstractTableConfig;
+import com.linkedin.pinot.common.metadata.ZKMetadataProvider;
+import com.linkedin.pinot.common.metadata.instance.InstanceZKMetadata;
+import com.linkedin.pinot.common.metadata.stream.KafkaStreamMetadata;
+import com.linkedin.pinot.common.utils.CommonConstants;
+import com.linkedin.pinot.common.utils.CommonConstants.Helix;
+import com.linkedin.pinot.common.utils.ControllerTenantNameBuilder;
+import com.linkedin.pinot.common.utils.StringUtil;
+import org.apache.log4j.Logger;
 
 
 /**
@@ -55,9 +46,6 @@ public class PinotTableIdealStateBuilder {
   public static final String OFFLINE = "OFFLINE";
   public static final String DROPPED = "DROPPED";
     private static Logger logger = Logger.getLogger(PinotTableIdealStateBuilder.class);
-
-  public static final Map<String, SegmentAssignmentStrategy> SEGMENT_ASSIGNMENT_STRATEGY_MAP =
-      new HashMap<String, SegmentAssignmentStrategy>();
 
   /**
    *
@@ -260,47 +248,4 @@ public class PinotTableIdealStateBuilder {
     return groupId;
   }
 
-  public static IdealState addNewOfflineSegmentToIdealStateFor(SegmentMetadata segmentMetadata,
-      HelixAdmin helixAdmin, String helixClusterName, ZkHelixPropertyStore<ZNRecord> propertyStore, String serverTenant)
-      throws JsonParseException, JsonMappingException, JsonProcessingException, JSONException, IOException {
-
-    final String offlineTableName =
-        TableNameBuilder.OFFLINE_TABLE_NAME_BUILDER.forTable(segmentMetadata.getTableName());
-
-    final String segmentName = segmentMetadata.getName();
-    AbstractTableConfig offlineTableConfig = ZKMetadataProvider.getOfflineTableConfig(propertyStore, offlineTableName);
-
-    if (!SEGMENT_ASSIGNMENT_STRATEGY_MAP.containsKey(offlineTableName)) {
-      SEGMENT_ASSIGNMENT_STRATEGY_MAP.put(offlineTableName, SegmentAssignmentStrategyFactory
-              .getSegmentAssignmentStrategy(offlineTableConfig.getValidationConfig().getSegmentAssignmentStrategy()));
-    }
-    final SegmentAssignmentStrategy segmentAssignmentStrategy = SEGMENT_ASSIGNMENT_STRATEGY_MAP.get(offlineTableName);
-    logger.info("get current ideal state");
-    //fixme
-    final IdealState currentIdealState = helixAdmin.getResourceIdealState(helixClusterName, offlineTableName);
-    final Set<String> currentInstanceSet = currentIdealState.getInstanceSet(segmentName);
-    if (currentInstanceSet.isEmpty()) {
-      // Adding new Segments
-        logger.info("current instance set is empty");
-      final int replicas = Integer.parseInt(offlineTableConfig.getValidationConfig().getReplication());
-      final List<String> selectedInstances =
-          segmentAssignmentStrategy.getAssignedInstances(helixAdmin, helixClusterName, segmentMetadata, replicas,
-              serverTenant);
-//        logger.info("addNewOfflineSegmentToIdealStateFor:"+selectedInstances.toString());
-      for (final String instance : selectedInstances) {
-        currentIdealState.setPartitionState(segmentName, instance, ONLINE);
-      }
-        currentIdealState.getRecord().setListField(segmentName,selectedInstances);
-      currentIdealState.setNumPartitions(currentIdealState.getNumPartitions() + 1);
-    } else {
-      // Update new Segments
-        logger.info("current instance set is not empty");
-      for (final String instance : currentInstanceSet) {
-        currentIdealState.setPartitionState(segmentName, instance, OFFLINE);
-        currentIdealState.setPartitionState(segmentName, instance, ONLINE);
-      }
-    }
-      logger.info("addNewOfflineSegmentToIdealStateFor :"+segmentName+"; Current ideal state is :"+currentIdealState.toString());
-        return currentIdealState;
-  }
 }

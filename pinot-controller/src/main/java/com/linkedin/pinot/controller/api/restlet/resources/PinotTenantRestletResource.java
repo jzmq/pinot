@@ -203,7 +203,7 @@ public class PinotTenantRestletResource extends PinotRestletResourceBase {
   @HttpVerb("get")
   @Summary("Gets information about a tenant")
   @Tags({ "tenant" })
-  @Paths({ "/tenants/{tenantName}", "/tenants/{tenantName}/" })
+  @Paths({ "/tenants/{tenantName}/metadata", "/tenants/{tenantName}/metadata/" })
   private StringRepresentation getTenant(
       @Parameter(name = "tenantName", in = "path", description = "The tenant name") String tenantName, @Parameter(
           name = "type", in = "query", description = "The type of tenant, either SERVER or BROKER") String type)
@@ -229,7 +229,7 @@ public class PinotTenantRestletResource extends PinotRestletResourceBase {
   }
 
   @HttpVerb("get")
-  @Summary("Gets information about a tenant")
+  @Summary("Enable, disable or drop a tenant")
   @Tags({ "tenant" })
   @Paths({ "/tenants/{tenantName}", "/tenants/{tenantName}/" })
   private StringRepresentation toggleTenantState(

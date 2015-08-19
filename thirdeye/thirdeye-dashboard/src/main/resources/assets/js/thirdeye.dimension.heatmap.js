@@ -1,10 +1,21 @@
 $(document).ready(function() {
+
     var data = $("#dimension-heat-map-data")
     var container = $("#dimension-heat-map-container")
+    var filterToggle = $("#dimension-heat-map-filter")
+
+    var hash = parseHashParameters(window.location.hash)
+    if (hash['filterState']) {
+        filterToggle.attr('state', hash['filterState'])
+    }
 
     var options = {
         filter: function(cell) {
-            return Math.abs(cell.stats['volume_difference']) > 0.005 // only show those w/ 0.5% or greater change
+            if (filterToggle.attr('state') === 'on') {
+                return  Math.abs(cell.stats['volume_difference']) > 0.005 // only show those w/ 0.5% or greater change
+            } else {
+                return true;
+            }
         },
         comparator: function(a, b) {
             var cmp = b.stats['current_value'] - a.stats['current_value'] // reverse
@@ -47,6 +58,19 @@ $(document).ready(function() {
         },
         groupBy: 'METRIC'
     }
+
+    filterToggle.click(function() {
+        var state = filterToggle.attr('state')
+        var nextState = state === 'on' ? 'off' : 'on'
+        filterToggle.attr('state', nextState)
+
+        // Set in URI
+        var hash = parseHashParameters(window.location.hash)
+        hash['filterState'] = nextState
+        window.location.hash = encodeHashParameters(hash)
+
+        renderHeatMap(data, container, options)
+    })
 
     renderHeatMap(data, container, options)
 })

@@ -90,19 +90,19 @@ import com.linkedin.pinot.core.segment.index.SegmentMetadataImpl;
  */
 public class PinotHelixResourceManager {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(PinotHelixResourceManager.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(PinotHelixResourceManager.class);
 
-    private String _zkBaseUrl;
-    private String _helixClusterName;
-    private HelixManager _helixZkManager;
-    private HelixAdmin _helixAdmin;
-    private String _helixZkURL;
-    private String _instanceId;
-    private ZkHelixPropertyStore<ZNRecord> _propertyStore;
-    private String _localDiskDir;
-    private SegmentDeletionManager _segmentDeletionManager = null;
-    private long _externalViewOnlineToOfflineTimeout;
-    private boolean _isSingleTenantCluster = true;
+  private String _zkBaseUrl;
+  private String _helixClusterName;
+  private HelixManager _helixZkManager;
+  private HelixAdmin _helixAdmin;
+  private String _helixZkURL;
+  private String _instanceId;
+  private ZkHelixPropertyStore<ZNRecord> _propertyStore;
+  private String _localDiskDir;
+  private SegmentDeletionManager _segmentDeletionManager = null;
+  private long _externalViewOnlineToOfflineTimeout;
+  private boolean _isSingleTenantCluster = true;
 
     private HelixDataAccessor _helixDataAccessor;
     Builder _keyBuilder;

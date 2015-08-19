@@ -15,15 +15,6 @@
  */
 package com.linkedin.pinot.controller.helix.core;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import org.apache.helix.HelixAdmin;
-import org.apache.helix.ZNRecord;
-import org.apache.helix.model.IdealState;
-import org.apache.helix.model.builder.CustomModeISBuilder;
-import org.apache.helix.store.zk.ZkHelixPropertyStore;
 
 import com.linkedin.pinot.common.config.AbstractTableConfig;
 import com.linkedin.pinot.common.metadata.ZKMetadataProvider;
@@ -33,7 +24,18 @@ import com.linkedin.pinot.common.utils.CommonConstants;
 import com.linkedin.pinot.common.utils.CommonConstants.Helix;
 import com.linkedin.pinot.common.utils.ControllerTenantNameBuilder;
 import com.linkedin.pinot.common.utils.StringUtil;
+import com.linkedin.pinot.controller.helix.core.sharding.SegmentAssignmentStrategy;
+import org.apache.helix.HelixAdmin;
+import org.apache.helix.ZNRecord;
+import org.apache.helix.model.IdealState;
+import org.apache.helix.model.builder.CustomModeISBuilder;
+import org.apache.helix.store.zk.ZkHelixPropertyStore;
 import org.apache.log4j.Logger;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 
 /**
@@ -47,6 +49,8 @@ public class PinotTableIdealStateBuilder {
   public static final String DROPPED = "DROPPED";
     private static Logger logger = Logger.getLogger(PinotTableIdealStateBuilder.class);
 
+  private static final Map<String, SegmentAssignmentStrategy> SEGMENT_ASSIGNMENT_STRATEGY_MAP =
+          new HashMap<String, SegmentAssignmentStrategy>();
   /**
    *
    * Building an empty idealState for a given table.
@@ -247,5 +251,4 @@ public class PinotTableIdealStateBuilder {
     }
     return groupId;
   }
-
 }

@@ -130,13 +130,13 @@ public class UAutoRebalancer implements Rebalancer, MappingCalculator {
 
         int maxPartition = currentIdealState.getMaxPartitionsPerInstance();
 
-        if (LOG.isInfoEnabled()) {
-            LOG.info("currentMapping: " + currentMapping);
-            LOG.info("stateCountMap: " + stateCountMap);
-            LOG.info("liveNodes: " + liveNodes);
-            LOG.info("allNodes: " + allNodes);
-            LOG.info("maxPartition: " + maxPartition);
-        }
+//        if (LOG.isInfoEnabled()) {
+//            LOG.info("currentMapping: " + currentMapping);
+//            LOG.info("stateCountMap: " + stateCountMap);
+//            LOG.info("liveNodes: " + liveNodes);
+//            LOG.info("allNodes: " + allNodes);
+//            LOG.info("maxPartition: " + maxPartition);
+//        }
 
         ZNRecord newMapping = null;
         List<String> liveServers = new ArrayList<String>();
@@ -184,7 +184,7 @@ public class UAutoRebalancer implements Rebalancer, MappingCalculator {
         newIdealState.getRecord().setSimpleFields(currentIdealState.getRecord().getSimpleFields());
         newIdealState.getRecord().setMapFields(newMapping.getMapFields());
         newIdealState.getRecord().setListFields(newMapping.getListFields());
-        LOG.info("#########new ideal state:"+newIdealState.toString());
+//        LOG.info("#########new ideal state:"+newIdealState.toString());
 
         return newIdealState;
     }

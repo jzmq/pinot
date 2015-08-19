@@ -15,6 +15,7 @@
  */
 package com.linkedin.pinot.common.utils.helix;
 
+
 import com.google.common.base.Function;
 import com.linkedin.pinot.common.utils.CommonConstants;
 import com.linkedin.pinot.common.utils.CommonConstants.Helix.DataSource.SegmentAssignmentStrategyType;
@@ -332,7 +333,7 @@ public class HelixHelper {
         for (final String instance : targetInstances) {
           idealState.setPartitionState(segmentName, instance, ONLINE);
         }
-
+        idealState.getRecord().setListField(segmentName,targetInstances);
         idealState.setNumPartitions(idealState.getNumPartitions() + 1);
         return idealState;
       }

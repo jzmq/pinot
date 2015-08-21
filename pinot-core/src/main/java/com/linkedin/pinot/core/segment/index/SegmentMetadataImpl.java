@@ -119,7 +119,9 @@ public class SegmentMetadataImpl implements SegmentMetadata {
     _allColumns = new HashSet<String>();
     _indexDir = null;
     _metadataFile = null;
-    LOGGER.info("loaded metadata successfully from ZK");
+    if(LOGGER.isDebugEnabled()) {
+      LOGGER.debug("loaded metadata successfully from ZK");
+    }
   }
 
   public SegmentMetadataImpl(RealtimeSegmentZKMetadata segmentMetadata) {

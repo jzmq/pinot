@@ -244,7 +244,7 @@ public class UAutoRebalanceStrategy {
                     }
                 }
                 if (donor.capacity < donor.currentlyAssigned) {
-                    logger.warn("Could not take partitions out of node:" + donor.id);
+                    //logger.warn("Could not take partitions out of node:" + donor.id);
                 }
             }
         }

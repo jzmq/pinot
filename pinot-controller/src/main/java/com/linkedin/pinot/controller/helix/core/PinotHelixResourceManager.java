@@ -1179,6 +1179,10 @@ public class PinotHelixResourceManager {
         HelixHelper.addSegmentToIdealState(_helixZkManager, offlineTableName, segmentName, getInstancesForSegment);
     }
 
+    public static void main(String args[]){
+
+    }
+
     /**
      * Returns true if the table name specified in the segment meta data has a corresponding
      * realtime or offline table in the helix cluster

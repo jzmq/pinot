@@ -26,7 +26,7 @@ public class RebalanceCommand extends AbstractBaseCommand implements Command {
     private String _resourceName = "";
 
 
-    @Option(name = "-replicas", required = true, metaVar = "<int>", usage = "Replica Number of Resource Partitions.")
+    @Option(name = "-replicas", required = false, metaVar = "<int>", usage = "Replica Number of Resource Partitions.")
     private int _replicas = 1;
 
 
@@ -39,25 +39,58 @@ public class RebalanceCommand extends AbstractBaseCommand implements Command {
             usage = "Print this message.")
     private boolean _help = false;
 
+
+    public RebalanceCommand setZkAddress(String zkAddress){
+        _zkAddress = zkAddress;
+        return this;
+    }
+
+    public RebalanceCommand setClusterName(String clusterName){
+        _clusterName = clusterName;
+        return this;
+    }
+
+    public RebalanceCommand setTableName(String tableName){
+        _resourceName = tableName;
+        return this;
+    }
+
+    public RebalanceCommand setPartitionPrefix(String partitionPrefix){
+        _partitionPrefix = partitionPrefix;
+        return this;
+    }
+
+    public RebalanceCommand setReplicas(int replicas){
+        _replicas = replicas;
+        return this;
+    }
+
+
     @Override
     public boolean execute() throws Exception {
+
+
+
         return false;
     }
 
     @Override
-    public void printUsage() {
-
+    public String getName(){
+        return "Rebalance";
     }
 
     @Override
     public String description() {
-        return null;
+        return "Balance Resources By CommandLine";
     }
-
-
 
     @Override
     public boolean getHelp() {
         return _help;
+    }
+
+    @Override
+    public String toString(){
+        return "Start Rebalance Resource -zkAddress "+ _zkAddress + " -clusterName " + _clusterName + " -tableName "+_resourceName+" -replicas "+ _replicas + " -partitionPrefix "+ _partitionPrefix ;
     }
 }

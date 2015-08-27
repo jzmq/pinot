@@ -95,6 +95,17 @@
 
     <repositories>
         <repository>
+            <id>test-nexus</id>
+            <name>Test-Nexus</name>
+            <url>http://10.10.10.242:8002/nexus/content/groups/public/</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+        <repository>
             <id>restlet.org</id>
             <url>http://maven.restlet.org</url>
             <releases>
@@ -131,17 +142,6 @@
         <repository>
             <id>osc</id>
             <url>http://maven.oschina.net/content/groups/public/</url>
-        </repository>
-        <repository>
-            <id>test-nexus</id>
-            <name>Test-Nexus</name>
-            <url>http://10.10.10.242:8002/nexus/content/groups/public/</url>
-            <releases>
-                <enabled>true</enabled>
-            </releases>
-            <snapshots>
-                <enabled>true</enabled>
-            </snapshots>
         </repository>
     </repositories>
 

@@ -88,7 +88,7 @@
     <!-- Configuration for unit/integration tests section 1 of 3 (properties) ENDS HERE.-->
     <avro.version>1.7.6</avro.version>
     <kafka.version>0.8.2.0</kafka.version>
-    <helix.version>0.6.5</helix.version>
+    <helix.version>0.6.5-release</helix.version>
     <!-- Sets the VM argument line used when unit tests are run. -->
     <argLine>-Xms10G -Xmx10G</argLine>
   </properties>

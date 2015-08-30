@@ -67,9 +67,9 @@ public class PinotTableIdealStateBuilder {
     final int replicas = numCopies;
     customModeIdealStateBuilder
         .setStateModel(PinotHelixSegmentOnlineOfflineStateModelGenerator.PINOT_SEGMENT_ONLINE_OFFLINE_STATE_MODEL)
-        .setNumPartitions(0).setNumReplica(replicas).setMaxPartitionsPerNode(1);
+        .setNumPartitions(0).setNumReplica(replicas).setMaxPartitionsPerNode(Integer.MAX_VALUE);
     final IdealState idealState = customModeIdealStateBuilder.build();
-    idealState.setInstanceGroupTag(tableName);
+//    idealState.setInstanceGroupTag(tableName);
 //      final UAutoModeISBuilder uAutoModeISBuilder = new UAutoModeISBuilder(tableName);
 //      final int replicas = numCopies;
 //      uAutoModeISBuilder.setStateModel(PinotHelixSegmentOnlineOfflineStateModelGenerator.PINOT_SEGMENT_ONLINE_OFFLINE_STATE_MODEL)

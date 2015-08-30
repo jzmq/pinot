@@ -16,10 +16,8 @@
 package com.linkedin.pinot.controller.helix;
 
 import com.linkedin.pinot.controller.helix.core.UAutoRebalancer;
-import org.apache.helix.HelixDataAccessor;
-import org.apache.helix.HelixException;
-import org.apache.helix.PropertyKey;
-import org.apache.helix.ZNRecord;
+import org.apache.helix.*;
+import org.apache.helix.controller.pipeline.StageException;
 import org.apache.helix.controller.stages.CurrentStateOutput;
 import org.apache.helix.manager.zk.ZKHelixDataAccessor;
 import org.apache.helix.manager.zk.ZNRecordSerializer;
@@ -82,11 +80,12 @@ public class Rebalancer {
         // ensure we get the same idealState with the same set of instances
         Collections.sort(instanceNames);
 
+
         IdealState idealState = getResourceIdealState(clusterName, resourceName);
         if (idealState == null) {
             throw new HelixException("Resource: " + resourceName + " has NOT been added yet");
         }
-
+        logger.info("###ideal state is : "+idealState.toString());
         if (groupId != null && groupId.length() > 0) {
             idealState.setInstanceGroupTag(groupId);
         }
@@ -136,10 +135,10 @@ public class Rebalancer {
         IdealState newIdealState = null;
         if (idealState.getRebalanceMode() != IdealState.RebalanceMode.FULL_AUTO
                 && idealState.getRebalanceMode() != IdealState.RebalanceMode.USER_DEFINED) {
-//            ZNRecord newIdealState =
-//                    DefaultIdealStateCalculator.calculateIdealState(instanceNames, partitions, replica,
-//                            keyPrefix, masterStateValue, slaveStateValue);
-
+            logger.info("#### Into rebalance mode");
+            logger.info("get live instance :"+getLiveInstances(clusterName));
+            logger.info("get instance config map :"+getInstanceConfigMap(clusterName));
+            logger.info("get current state output "+ computeCurrentStateOutput(clusterName));
              newIdealState = _rebalancer.computeNewIdealState(resourceName,idealState,stateModDef,
                      getLiveInstances(clusterName),getInstanceConfigMap(clusterName),computeCurrentStateOutput(clusterName));
 
@@ -150,19 +149,26 @@ public class Rebalancer {
                 newIdealState.getRecord().setListField(partitionName, new ArrayList<String>());
             }
         }
+        logger.info("new ideal state is : "+ newIdealState.toString());
         setResourceIdealState(clusterName, resourceName, newIdealState);
     }
 
     public Map<String,LiveInstance>  getLiveInstances(String clusterName){
         HelixDataAccessor accessor = new ZKHelixDataAccessor(clusterName,new ZkBaseDataAccessor<ZNRecord>(_zkClient));
         PropertyKey.Builder keyBuilder = accessor.keyBuilder();
-        return accessor.getProperty(keyBuilder.liveInstances());
+        return accessor.getChildValuesMap(keyBuilder.liveInstances());
     }
 
     public Map<String,InstanceConfig> getInstanceConfigMap(String clusterName){
         HelixDataAccessor accessor = new ZKHelixDataAccessor(clusterName,new ZkBaseDataAccessor<ZNRecord>(_zkClient));
         PropertyKey.Builder keyBuilder = accessor.keyBuilder();
-        return accessor.getProperty(keyBuilder.instanceConfigs());
+        return accessor.getChildValuesMap(keyBuilder.instanceConfigs());
+    }
+
+    public Map<String,IdealState> getIdealStates(String clusterName){
+        HelixDataAccessor accessor = new ZKHelixDataAccessor(clusterName,new ZkBaseDataAccessor<ZNRecord>(_zkClient));
+        PropertyKey.Builder keyBuilder = accessor.keyBuilder();
+        return accessor.getChildValuesMap(keyBuilder.idealStates());
     }
 
     public IdealState getResourceIdealState(String clusterName, String resourceName) {
@@ -207,25 +213,19 @@ public class Rebalancer {
         return result;
     }
 
+
     public List<String> getInstancesInCluster(String clusterName) {
         String memberInstancesPath = HelixUtil.getMemberInstancesPath(clusterName);
         return _zkClient.getChildren(memberInstancesPath);
     }
 
-    public Map<String, Resource> getResourceMap (String clusterName){
-        HelixDataAccessor accessor =
-                new ZKHelixDataAccessor(clusterName, new ZkBaseDataAccessor<ZNRecord>(_zkClient));
-        PropertyKey.Builder keyBuilder = accessor.keyBuilder();
-
-        return accessor.getProperty(keyBuilder.resourceConfigs());
-    }
 
     public Map<String, Message> getInstanceMessage (String clusterName,String instanceName){
         HelixDataAccessor accessor =
                 new ZKHelixDataAccessor(clusterName, new ZkBaseDataAccessor<ZNRecord>(_zkClient));
         PropertyKey.Builder keyBuilder = accessor.keyBuilder();
 
-        return accessor.getProperty(keyBuilder.messages(instanceName));
+        return accessor.getChildValuesMap(keyBuilder.messages(instanceName));
     }
 
     public Map<String, CurrentState> getCurrentState (String clusterName,String instanceName,String clientSessionId){
@@ -233,7 +233,105 @@ public class Rebalancer {
                 new ZKHelixDataAccessor(clusterName, new ZkBaseDataAccessor<ZNRecord>(_zkClient));
         PropertyKey.Builder keyBuilder = accessor.keyBuilder();
 
-        return accessor.getProperty(keyBuilder.currentStates(instanceName,clientSessionId));
+        return accessor.getChildValuesMap(keyBuilder.currentStates(instanceName, clientSessionId));
+    }
+
+    public Map<String,Resource> getResourceMap(String clusterName){
+        Map<String, IdealState> idealStates = getIdealStates(clusterName);
+
+        Map<String, Resource> resourceMap = new LinkedHashMap<String, Resource>();
+
+        if (idealStates != null && idealStates.size() > 0) {
+            for (IdealState idealState : idealStates.values()) {
+                Set<String> partitionSet = idealState.getPartitionSet();
+                String resourceName = idealState.getResourceName();
+                if (!resourceMap.containsKey(resourceName)) {
+                    Resource resource = new Resource(resourceName);
+                    resourceMap.put(resourceName, resource);
+                    resource.setStateModelDefRef(idealState.getStateModelDefRef());
+                    resource.setStateModelFactoryName(idealState.getStateModelFactoryName());
+                    resource.setBucketSize(idealState.getBucketSize());
+                    resource.setBatchMessageMode(idealState.getBatchMessageMode());
+                }
+
+                for (String partition : partitionSet) {
+                    addPartition(partition, resourceName, resourceMap);
+                }
+            }
+        }
+
+        Map<String, LiveInstance> availableInstances = getLiveInstances(clusterName);
+
+        if (availableInstances != null && availableInstances.size() > 0) {
+            for (LiveInstance instance : availableInstances.values()) {
+                String instanceName = instance.getInstanceName();
+                String clientSessionId = instance.getSessionId();
+
+                Map<String, CurrentState> currentStateMap =
+                        getCurrentState(clusterName, instanceName, clientSessionId);
+                if (currentStateMap == null || currentStateMap.size() == 0) {
+                    continue;
+                }
+                for (CurrentState currentState : currentStateMap.values()) {
+
+                    String resourceName = currentState.getResourceName();
+                    Map<String, String> resourceStateMap = currentState.getPartitionStateMap();
+
+                    if (resourceStateMap.keySet().isEmpty()) {
+                        // don't include empty current state for dropped resource
+                        continue;
+                    }
+
+                    // don't overwrite ideal state settings
+                    if (!resourceMap.containsKey(resourceName)) {
+                        addResource(resourceName, resourceMap);
+                        Resource resource = resourceMap.get(resourceName);
+                        resource.setStateModelDefRef(currentState.getStateModelDefRef());
+                        resource.setStateModelFactoryName(currentState.getStateModelFactoryName());
+                        resource.setBucketSize(currentState.getBucketSize());
+                        resource.setBatchMessageMode(currentState.getBatchMessageMode());
+                    }
+
+                    if (currentState.getStateModelDefRef() == null) {
+                        logger.error("state model def is null." + "resource:" + currentState.getResourceName()
+                                + ", partitions: " + currentState.getPartitionStateMap().keySet() + ", states: "
+                                + currentState.getPartitionStateMap().values());
+                        try {
+                            throw new StageException("State model def is null for resource:"
+                                    + currentState.getResourceName());
+                        } catch (StageException e) {
+                            e.printStackTrace();
+                        }
+                    }
+
+                    for (String partition : resourceStateMap.keySet()) {
+                        addPartition(partition, resourceName, resourceMap);
+                    }
+                }
+            }
+        }
+        return resourceMap;
+    }
+
+    private void addResource(String resource, Map<String, Resource> resourceMap) {
+        if (resource == null || resourceMap == null) {
+            return;
+        }
+        if (!resourceMap.containsKey(resource)) {
+            resourceMap.put(resource, new Resource(resource));
+        }
+    }
+
+    private void addPartition(String partition, String resourceName, Map<String, Resource> resourceMap) {
+        if (resourceName == null || partition == null || resourceMap == null) {
+            return;
+        }
+        if (!resourceMap.containsKey(resourceName)) {
+            resourceMap.put(resourceName, new Resource(resourceName));
+        }
+        Resource resource = resourceMap.get(resourceName);
+        resource.addPartition(partition);
+
     }
 
 
@@ -316,7 +414,6 @@ public class Rebalancer {
         }
         return currentStateOutput;
     }
-
 }
 
 

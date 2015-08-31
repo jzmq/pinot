@@ -71,8 +71,107 @@ public class UAutoRebalancer implements Rebalancer, MappingCalculator {
         this._algorithm = null;
     }
 
+    public IdealState computeNewIdealState(String resourceName,IdealState currentIdealState,StateModelDefinition stateModelDef,
+                                           Map<String,LiveInstance> liveInstance,Map<String,InstanceConfig> instanceConfigMap,CurrentStateOutput currentStateOutput){
+        List<String> partitions = new ArrayList<String>(currentIdealState.getPartitionSet());
+        String stateModelName = currentIdealState.getStateModelDefRef();
+
+        String replicas = currentIdealState.getReplicas();
+        LinkedHashMap<String, Integer> stateCountMap = new LinkedHashMap<String, Integer>();
+        stateCountMap = stateCount(stateModelDef, liveInstance.size(), Integer.parseInt(replicas));
+        List<String> liveNodes = new ArrayList<String>(liveInstance.keySet());
+
+        List<String> allNodes = new ArrayList<String>(instanceConfigMap.keySet());
+
+        Map<String, Map<String, String>> currentMapping =
+                currentMapping(currentStateOutput, resourceName, partitions, stateCountMap);
+
+        // If there are nodes tagged with resource name, use only those nodes
+        Set<String> taggedNodes = new HashSet<String>();
+        Set<String> taggedLiveNodes = new HashSet<String>();
+        if (currentIdealState.getInstanceGroupTag() != null) {
+            for (String instanceName : allNodes) {
+                if (instanceConfigMap.get(instanceName)
+                        .containsTag(currentIdealState.getInstanceGroupTag())) {
+                    taggedNodes.add(instanceName);
+                    if (liveInstance.containsKey(instanceName)) {
+                        taggedLiveNodes.add(instanceName);
+                    }
+                }
+            }
+            if (!taggedLiveNodes.isEmpty()) {
+                // live nodes exist that have this tag
+                if (LOG.isInfoEnabled()) {
+                    LOG.info("found the following participants with tag "
+                            + currentIdealState.getInstanceGroupTag() + " for " + resourceName + ": "
+                            + taggedLiveNodes);
+                }
+            } else if (taggedNodes.isEmpty()) {
+                // no live nodes and no configured nodes have this tag
+                LOG.warn("Resource " + resourceName + " has tag " + currentIdealState.getInstanceGroupTag()
+                        + " but no configured participants have this tag");
+            } else {
+                // configured nodes have this tag, but no live nodes have this tag
+                LOG.warn("Resource " + resourceName + " has tag " + currentIdealState.getInstanceGroupTag()
+                        + " but no live participants have this tag");
+            }
+            allNodes = new ArrayList<String>(taggedNodes);
+            liveNodes = new ArrayList<String>(taggedLiveNodes);
+        }
+
+        // sort node lists to ensure consistent preferred assignments
+        Collections.sort(allNodes);
+        Collections.sort(liveNodes);
+
+        int maxPartition = currentIdealState.getMaxPartitionsPerInstance();
+
+
+        ZNRecord newMapping = null;
+        List<String> liveServers = new ArrayList<String>();
+        List<String> allServers = new ArrayList<String>();
+        List<String> liveBrokers = new ArrayList<String>();
+        List<String> allBrokers = new ArrayList<String>();
+
+        for (String tmp:liveNodes){
+            if (tmp.startsWith("Broker_")){
+                liveBrokers.add(tmp);
+            }else{
+                liveServers.add(tmp);
+            }
+        }
+        for (String tmp:allNodes){
+            if (tmp.startsWith("Broker_")){
+                allBrokers.add(tmp);
+            }else{
+                allServers.add(tmp);
+            }
+        }
+
+        if (resourceName.equals("brokerResource")){
+            newMapping = calculateNewMapping(resourceName,partitions,stateCountMap,maxPartition,liveBrokers,currentMapping,allBrokers);
+        } else{
+            newMapping = calculateNewMapping(resourceName,partitions,stateCountMap,maxPartition,liveServers,currentMapping,allServers);
+        }
+
+
+        if (LOG.isInfoEnabled()) {
+            LOG.info("newMapping: " + newMapping);
+        }
+        if (isTheSameMapping(currentIdealState.getRecord().getMapFields(),newMapping.getMapFields())){
+            LOG.info("The same mapping return currentIdealState");
+            return currentIdealState;
+        }
+        IdealState newIdealState = new IdealState(resourceName);
+        newIdealState.getRecord().setSimpleFields(currentIdealState.getRecord().getSimpleFields());
+        newIdealState.getRecord().setMapFields(newMapping.getMapFields());
+        newIdealState.getRecord().setListFields(newMapping.getListFields());
+
+        return newIdealState;
+    }
+
+
     @Override
-    public IdealState computeNewIdealState(String resourceName, IdealState currentIdealState, CurrentStateOutput currentStateOutput, ClusterDataCache clusterData) {
+    public IdealState computeNewIdealState(String resourceName, IdealState currentIdealState, CurrentStateOutput currentStateOutput,ClusterDataCache clusterData) {
 //        LOG.info("######resourceName :"+resourceName);
 //        LOG.info("######current idealstate :" + currentIdealState.toString());
 //        LOG.info("#######current state output :" + currentStateOutput.toString());

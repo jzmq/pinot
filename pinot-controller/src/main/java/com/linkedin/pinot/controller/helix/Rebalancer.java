@@ -31,7 +31,7 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 /**
- *
+ * In this class , we rebuild many env parameters for UAutoRebalancer to calculate new idealstate
  */
 
 public class Rebalancer {
@@ -46,6 +46,7 @@ public class Rebalancer {
          _zkClient.setZkSerializer(new ZNRecordSerializer());
          _zkClient.waitUntilConnected(30, TimeUnit.SECONDS);
          _rebalancer = new UAutoRebalancer();
+        // Here no need to init especially helixmanager
     }
 
     public void rebalance(String clusterName, String resourceName, int replica) {
@@ -85,7 +86,7 @@ public class Rebalancer {
         if (idealState == null) {
             throw new HelixException("Resource: " + resourceName + " has NOT been added yet");
         }
-        logger.info("###ideal state is : "+idealState.toString());
+//        logger.info("###ideal state is : "+idealState.toString());
         if (groupId != null && groupId.length() > 0) {
             idealState.setInstanceGroupTag(groupId);
         }
@@ -135,10 +136,10 @@ public class Rebalancer {
         IdealState newIdealState = null;
         if (idealState.getRebalanceMode() != IdealState.RebalanceMode.FULL_AUTO
                 && idealState.getRebalanceMode() != IdealState.RebalanceMode.USER_DEFINED) {
-            logger.info("#### Into rebalance mode");
-            logger.info("get live instance :"+getLiveInstances(clusterName));
-            logger.info("get instance config map :"+getInstanceConfigMap(clusterName));
-            logger.info("get current state output "+ computeCurrentStateOutput(clusterName));
+//            logger.info("#### Into rebalance mode");
+//            logger.info("get live instance :"+getLiveInstances(clusterName));
+//            logger.info("get instance config map :"+getInstanceConfigMap(clusterName));
+//            logger.info("get current state output "+ computeCurrentStateOutput(clusterName));
              newIdealState = _rebalancer.computeNewIdealState(resourceName,idealState,stateModDef,
                      getLiveInstances(clusterName),getInstanceConfigMap(clusterName),computeCurrentStateOutput(clusterName));
 
@@ -149,28 +150,49 @@ public class Rebalancer {
                 newIdealState.getRecord().setListField(partitionName, new ArrayList<String>());
             }
         }
-        logger.info("new ideal state is : "+ newIdealState.toString());
+//        logger.info("new ideal state is : "+ newIdealState.toString());
         setResourceIdealState(clusterName, resourceName, newIdealState);
     }
 
+    /**
+     * Get LiveInstances by clusterName
+     * @param clusterName
+     * @return
+     */
     public Map<String,LiveInstance>  getLiveInstances(String clusterName){
         HelixDataAccessor accessor = new ZKHelixDataAccessor(clusterName,new ZkBaseDataAccessor<ZNRecord>(_zkClient));
         PropertyKey.Builder keyBuilder = accessor.keyBuilder();
         return accessor.getChildValuesMap(keyBuilder.liveInstances());
     }
 
+    /**
+     * Get Instance Configs
+     * @param clusterName
+     * @return
+     */
     public Map<String,InstanceConfig> getInstanceConfigMap(String clusterName){
         HelixDataAccessor accessor = new ZKHelixDataAccessor(clusterName,new ZkBaseDataAccessor<ZNRecord>(_zkClient));
         PropertyKey.Builder keyBuilder = accessor.keyBuilder();
         return accessor.getChildValuesMap(keyBuilder.instanceConfigs());
     }
 
+    /**
+     * Get IdealState
+     * @param clusterName
+     * @return
+     */
     public Map<String,IdealState> getIdealStates(String clusterName){
         HelixDataAccessor accessor = new ZKHelixDataAccessor(clusterName,new ZkBaseDataAccessor<ZNRecord>(_zkClient));
         PropertyKey.Builder keyBuilder = accessor.keyBuilder();
         return accessor.getChildValuesMap(keyBuilder.idealStates());
     }
 
+    /**
+     * Get Resource IdealState
+     * @param clusterName
+     * @param resourceName
+     * @return
+     */
     public IdealState getResourceIdealState(String clusterName, String resourceName) {
         HelixDataAccessor accessor =
                 new ZKHelixDataAccessor(clusterName, new ZkBaseDataAccessor<ZNRecord>(_zkClient));
@@ -179,6 +201,12 @@ public class Rebalancer {
         return accessor.getProperty(keyBuilder.idealStates(resourceName));
     }
 
+    /**
+     * Set Resource IdealState
+     * @param clusterName
+     * @param resourceName
+     * @param idealState
+     */
     public void setResourceIdealState(String clusterName, String resourceName, IdealState idealState) {
         HelixDataAccessor accessor =
                 new ZKHelixDataAccessor(clusterName, new ZkBaseDataAccessor<ZNRecord>(_zkClient));
@@ -187,6 +215,12 @@ public class Rebalancer {
         accessor.setProperty(keyBuilder.idealStates(resourceName), idealState);
     }
 
+    /**
+     * Get State model Def
+     * @param clusterName
+     * @param stateModelName
+     * @return
+     */
     public StateModelDefinition getStateModelDef(String clusterName, String stateModelName) {
         HelixDataAccessor accessor =
                 new ZKHelixDataAccessor(clusterName, new ZkBaseDataAccessor<ZNRecord>(_zkClient));
@@ -195,6 +229,12 @@ public class Rebalancer {
         return accessor.getProperty(keyBuilder.stateModelDef(stateModelName));
     }
 
+    /**
+     * Get Instances with Tag
+     * @param clusterName
+     * @param tag
+     * @return
+     */
     public List<String> getInstancesInClusterWithTag(String clusterName, String tag) {
         String memberInstancesPath = HelixUtil.getMemberInstancesPath(clusterName);
         List<String> instances = _zkClient.getChildren(memberInstancesPath);
@@ -213,13 +253,23 @@ public class Rebalancer {
         return result;
     }
 
-
+    /**
+     * Get all instances
+     * @param clusterName
+     * @return
+     */
     public List<String> getInstancesInCluster(String clusterName) {
         String memberInstancesPath = HelixUtil.getMemberInstancesPath(clusterName);
         return _zkClient.getChildren(memberInstancesPath);
     }
 
 
+    /**
+     * Get Instance Message
+     * @param clusterName
+     * @param instanceName
+     * @return
+     */
     public Map<String, Message> getInstanceMessage (String clusterName,String instanceName){
         HelixDataAccessor accessor =
                 new ZKHelixDataAccessor(clusterName, new ZkBaseDataAccessor<ZNRecord>(_zkClient));
@@ -228,6 +278,14 @@ public class Rebalancer {
         return accessor.getChildValuesMap(keyBuilder.messages(instanceName));
     }
 
+
+    /**
+     * Get Instance CurrentState
+     * @param clusterName
+     * @param instanceName
+     * @param clientSessionId
+     * @return
+     */
     public Map<String, CurrentState> getCurrentState (String clusterName,String instanceName,String clientSessionId){
         HelixDataAccessor accessor =
                 new ZKHelixDataAccessor(clusterName, new ZkBaseDataAccessor<ZNRecord>(_zkClient));
@@ -236,6 +294,11 @@ public class Rebalancer {
         return accessor.getChildValuesMap(keyBuilder.currentStates(instanceName, clientSessionId));
     }
 
+    /**
+     * Get Resource Map
+     * @param clusterName
+     * @return
+     */
     public Map<String,Resource> getResourceMap(String clusterName){
         Map<String, IdealState> idealStates = getIdealStates(clusterName);
 
@@ -334,7 +397,11 @@ public class Rebalancer {
 
     }
 
-
+    /**
+     * Compute CurrentStateOutput , the same as CurrentStateComputationStage.java
+     * @param clusterName
+     * @return
+     */
     public CurrentStateOutput computeCurrentStateOutput(String clusterName){
 
         Map<String, Resource> resourceMap = getResourceMap(clusterName);

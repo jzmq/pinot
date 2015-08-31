@@ -80,8 +80,8 @@ public class PinotClientRequestServlet extends HttpServlet {
   @Override
   protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
     try {
-      resp.setHeader("Content-Type", "text/html;charset=UTF-8");
-      resp.getOutputStream().write(handleRequest(new JSONObject(req.getParameter("bql"))).toJson().toString().getBytes("UTF-8"));
+      resp.setHeader("Content-Type", "text/ht;charset=UTF-8");
+      resp.getOutputStream().write(handleRequest(extractJSON(req)).toJson().toString().getBytes("UTF-8"));
       resp.getOutputStream().flush();
       resp.getOutputStream().close();
     } catch (final Exception e) {

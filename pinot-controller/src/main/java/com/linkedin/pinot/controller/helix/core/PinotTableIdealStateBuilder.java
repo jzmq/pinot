@@ -63,19 +63,19 @@ public class PinotTableIdealStateBuilder {
    */
   public static IdealState buildEmptyIdealStateFor(String tableName, int numCopies, HelixAdmin helixAdmin,
       String helixClusterName) {
-//    final CustomModeISBuilder customModeIdealStateBuilder = new CustomModeISBuilder(tableName);
-//    final int replicas = numCopies;
-//    customModeIdealStateBuilder
-//        .setStateModel(PinotHelixSegmentOnlineOfflineStateModelGenerator.PINOT_SEGMENT_ONLINE_OFFLINE_STATE_MODEL)
-//        .setNumPartitions(0).setNumReplica(replicas).setMaxPartitionsPerNode(1);
-//    final IdealState idealState = customModeIdealStateBuilder.build();
+    final CustomModeISBuilder customModeIdealStateBuilder = new CustomModeISBuilder(tableName);
+    final int replicas = numCopies;
+    customModeIdealStateBuilder
+        .setStateModel(PinotHelixSegmentOnlineOfflineStateModelGenerator.PINOT_SEGMENT_ONLINE_OFFLINE_STATE_MODEL)
+        .setNumPartitions(0).setNumReplica(replicas).setMaxPartitionsPerNode(Integer.MAX_VALUE);
+    final IdealState idealState = customModeIdealStateBuilder.build();
 //    idealState.setInstanceGroupTag(tableName);
-      final UAutoModeISBuilder uAutoModeISBuilder = new UAutoModeISBuilder(tableName);
-      final int replicas = numCopies;
-      uAutoModeISBuilder.setStateModel(PinotHelixSegmentOnlineOfflineStateModelGenerator.PINOT_SEGMENT_ONLINE_OFFLINE_STATE_MODEL)
-              .setNumPartitions(0).setNumReplica(replicas).setMaxPartitionsPerNode(Integer.MAX_VALUE);
-      final IdealState idealState = uAutoModeISBuilder.build();
-      idealState.setRebalancerClassName(UAutoRebalancer.class.getName());
+//      final UAutoModeISBuilder uAutoModeISBuilder = new UAutoModeISBuilder(tableName);
+//      final int replicas = numCopies;
+//      uAutoModeISBuilder.setStateModel(PinotHelixSegmentOnlineOfflineStateModelGenerator.PINOT_SEGMENT_ONLINE_OFFLINE_STATE_MODEL)
+//              .setNumPartitions(0).setNumReplica(replicas).setMaxPartitionsPerNode(Integer.MAX_VALUE);
+//      final IdealState idealState = uAutoModeISBuilder.build();
+//      idealState.setRebalancerClassName(UAutoRebalancer.class.getName());
     return idealState;
   }
 

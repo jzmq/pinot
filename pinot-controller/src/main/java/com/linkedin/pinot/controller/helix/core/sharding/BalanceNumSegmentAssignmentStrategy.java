@@ -56,6 +56,7 @@ public class BalanceNumSegmentAssignmentStrategy implements SegmentAssignmentStr
       currentNumSegmentsPerInstanceMap.put(instance, 0);
     }
     ExternalView externalView = helixAdmin.getResourceExternalView(helixClusterName, tableName);
+    LOGGER.info("######External View is:"+externalView.toString());
     if (externalView != null) {
       for (String partitionName : externalView.getPartitionSet()) {
         Map<String, String> instanceToStateMap = externalView.getStateMap(partitionName);
@@ -69,6 +70,7 @@ public class BalanceNumSegmentAssignmentStrategy implements SegmentAssignmentStr
       }
 
     }
+    LOGGER.info("CurrentNumSegementsPerInstanceMap is:"+currentNumSegmentsPerInstanceMap.toString());
     PriorityQueue<Number2ObjectPair<String>> priorityQueue =
         new PriorityQueue<Number2ObjectPair<String>>(numReplicas, Pairs.getDescendingnumber2ObjectPairComparator());
     for (String key : currentNumSegmentsPerInstanceMap.keySet()) {
@@ -77,7 +79,7 @@ public class BalanceNumSegmentAssignmentStrategy implements SegmentAssignmentStr
         priorityQueue.poll();
       }
     }
-
+    LOGGER.info("PriorityQueue is:"+priorityQueue.toString());
     while (!priorityQueue.isEmpty()) {
       selectedInstances.add(priorityQueue.poll().getB());
     }

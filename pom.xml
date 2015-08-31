@@ -128,6 +128,10 @@
         <id>cloudera cdh repo</id>
         <url>https://repository.cloudera.com/content/groups/cloudera-repos</url>
     </repository>
+    <!--<repository>-->
+      <!--<id>sh</id>-->
+      <!--<url>http://10.10.10.242:8002/nexus/content/repositories/public</url>-->
+    <!--</repository>-->
   </repositories>
 
   <dependencyManagement>

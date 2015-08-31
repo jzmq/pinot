@@ -272,8 +272,8 @@ public class UAutoRebalancer implements Rebalancer, MappingCalculator {
 //        ZNRecord newMapping =
 //                _algorithm.computePartitionAssignment(liveNodes, currentMapping, allNodes);
 
-        if (LOG.isInfoEnabled()) {
-            LOG.info("newMapping: " + newMapping);
+        if (LOG.isInfoEnabled() && LOG.isDebugEnabled()) {
+            LOG.debug("newMapping: " + newMapping);
         }
         if (isTheSameMapping(currentIdealState.getRecord().getMapFields(),newMapping.getMapFields())){
             LOG.info("The same mapping return currentIdealState");

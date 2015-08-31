@@ -50,9 +50,9 @@ public class RuntimeMonitor {
             try{
                 while(true){
                     TimeUnit.MINUTES.sleep(10);
-                    long freeMemory=  runtime.freeMemory()/8/1024/1024;
-                    long maxMemory= runtime.maxMemory()/8/1024/1024;
-                    long totalMemory=runtime.totalMemory()/8/1024/1024;
+                    long freeMemory=  runtime.freeMemory()/1024/1024;
+                    long maxMemory= runtime.maxMemory()/1024/1024;
+                    long totalMemory=runtime.totalMemory()/1024/1024;
 
                     StringBuffer sb=new StringBuffer();
                     sb.append(hostName+"["+helexType+"]").append("|").append("freeMemory:").append(freeMemory).append("m;").append("maxMemory:").append(maxMemory)

@@ -78,8 +78,10 @@ public class HelixBrokerRoutingTable implements ExternalViewChangeListener, Inst
     for (ExternalView externalView : externalViewList) {
       String resourceName = externalView.getResourceName();
       if (servingClusterList.contains(resourceName)) {
-        LOGGER.info("Trying to update ExternalView for data resource : " + resourceName + ", ExternalView: "
-            + externalView);
+        if(LOGGER.isDebugEnabled()) {
+          //LOGGER.debug("Trying to update ExternalView for data resource : " + resourceName + ", ExternalView: "
+          //        + externalView);
+        }
         _helixExternalViewBasedRouting.markDataResourceOnline(
             resourceName,
             HelixHelper.getExternalViewForResouce(_helixManager.getClusterManagmentTool(),

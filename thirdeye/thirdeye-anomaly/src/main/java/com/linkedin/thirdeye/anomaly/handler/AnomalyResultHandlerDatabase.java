@@ -7,10 +7,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linkedin.thirdeye.anomaly.api.AnomalyDatabaseConfig;
-import com.linkedin.thirdeye.anomaly.api.AnomalyDetectionTaskInfo;
 import com.linkedin.thirdeye.anomaly.api.AnomalyResultHandler;
 import com.linkedin.thirdeye.anomaly.api.HandlerProperties;
-import com.linkedin.thirdeye.anomaly.api.external.AnomalyResult;
+import com.linkedin.thirdeye.anomaly.api.function.AnomalyResult;
+import com.linkedin.thirdeye.anomaly.api.task.AnomalyDetectionTaskInfo;
 import com.linkedin.thirdeye.anomaly.database.AnomalyTable;
 import com.linkedin.thirdeye.anomaly.database.AnomalyTableRow;
 import com.linkedin.thirdeye.anomaly.util.DimensionKeyUtils;
@@ -62,7 +62,7 @@ public class AnomalyResultHandlerDatabase implements AnomalyResultHandler {
     row.setCollection(starTreeConfig.getCollection());
     row.setTimeWindow(result.getTimeWindow());
     row.setNonStarCount(dimensionKey.getDimensionValues().length - DimensionKeyUtils.getStarCount(dimensionKey));
-    row.setDimensions(DimensionKeyUtils.toJsonString(starTreeConfig.getDimensions(), dimensionKey));
+    row.setDimensions(DimensionKeyUtils.toMap(starTreeConfig.getDimensions(), dimensionKey));
     row.setDimensionsContribution(dimensionKeyContribution);
     row.setMetrics(metrics);
     row.setAnomalyScore(result.getAnomalyScore());

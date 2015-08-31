@@ -11,7 +11,6 @@ import org.joda.time.DateTime;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import com.linkedin.thirdeye.anomaly.api.AnomalyDatabaseConfig;
 
 public class ReportConfig {
 
@@ -33,10 +32,23 @@ public class ReportConfig {
   private DBSpec dbconfig;
   @NotNull
   private String timezone;
+  private String dashboardUri;
 
 
   public ReportConfig() {
 
+  }
+
+
+
+  public String getDashboardUri() {
+    return dashboardUri;
+  }
+
+
+
+  public void setDashboardUri(String dashboardUri) {
+    this.dashboardUri = dashboardUri;
   }
 
 

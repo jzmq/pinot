@@ -24,6 +24,7 @@ import com.linkedin.pinot.util.TestUtils;
 import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
@@ -50,6 +51,8 @@ public class TDigestTest {
     public static String _columnName = "met";
     public static AggregationInfo _paramsInfo;
 
+    private static final double threshold = 0.1;  // Precision threshold, can be set to smaller value.
+
     /**
      * This does not mean too much sense here, but we fix it to a small number.
      */
@@ -67,6 +70,7 @@ public class TDigestTest {
 
     @BeforeClass
     public static void setup() {
+        TDigest.TEST_ENABLED = true;
         _docIdsArray = new int[_sizeOfDocIdArray];
         for (int i = 0; i < _sizeOfDocIdArray; ++i) {
             _docIdsArray[i] = i;
@@ -79,8 +83,15 @@ public class TDigestTest {
         _paramsInfo.setAggregationParams(params);
     }
 
+    @AfterClass
+    public static void tearDown() {
+        TDigest.TEST_ENABLED = false;
+    }
+
     public static class RandomNumberArray {
-        private static Random _rnd = new Random(System.currentTimeMillis());
+        // For test purpose, we fix the random seeds.
+        // It should also work for arbitrary seeds like System.currentTimeMillis()
+        private static Random _rnd = new Random(0L);
 
         private final Integer[] arr;
         private final HashSet<Integer> set = new HashSet<Integer>();
@@ -107,7 +118,7 @@ public class TDigestTest {
             // add to set
             set.addAll(lst);
             // shuffle
-            Collections.shuffle(lst);
+            Collections.shuffle(lst, new Random(10L));
             // toIntArray
             arr = lst.toArray(new Integer[0]);
             if (arr.length != size) {
@@ -164,7 +175,7 @@ public class TDigestTest {
                 List<Serializable> combinedResult2 = aggregationAccurateFunction.combine(aggregationResults2, CombineLevel.SEGMENT);
                 double actual = (Double) QuantileUtil.getValueOnQuantile((DoubleArrayList) combinedResult2.get(0), quantile);
 
-                TestUtils.assertApproximation(estimate, actual, 0.05);
+                TestUtils.assertApproximation(estimate, actual, threshold);
                 sb1.append((int)estimate + ", ");
                 sb2.append(i + ", ");
             }
@@ -176,7 +187,7 @@ public class TDigestTest {
               List<Serializable> combinedResults2 = getDoubleArrayListResultValues(i);
               double estimate = (Double) aggregationFunction.reduce(combinedResults);
               double actual = (Double) aggregationAccurateFunction.reduce(combinedResults2);
-              TestUtils.assertApproximation(estimate, actual, 0.05);
+              TestUtils.assertApproximation(estimate, actual, threshold);
             }
         }
     }
@@ -212,8 +223,8 @@ public class TDigestTest {
                 List<Serializable> combinedResult2 = aggregationAccurateFunction.combine(aggregationResults2, CombineLevel.SEGMENT);
                 double actual = (Double) QuantileUtil.getValueOnQuantile((DoubleArrayList) combinedResult2.get(0), quantile);
 
-                TestUtils.assertApproximation(estimate, actual, 0.05);
                 println(i + ", " + "" + (t2 - t1) + "" + ", " + (t3 - t2) + ", " + getErrorString(actual, estimate));
+                TestUtils.assertApproximation(estimate, actual, threshold);
             }
         }
     }
@@ -253,9 +264,9 @@ public class TDigestTest {
                 double actual = (Double) QuantileUtil.getValueOnQuantile((DoubleArrayList) combinedResult2.get(0), quantile);
                 long t4 = System.nanoTime();
 
-                TestUtils.assertApproximation(estimate, actual, 0.05);
                 println(i + ", " + (t2 - t1) + ", " + (t4 - t3) + ", " + (t2 - t1 + 0.0) / (t4 - t3 + 0.0) + ", "
                         + estimate + ", " + actual + ", " + getErrorString(actual, estimate));
+                TestUtils.assertApproximation(estimate, actual, threshold);
             }
         }
     }
@@ -358,7 +369,11 @@ public class TDigestTest {
     }
 
     private String getErrorString(double precise, double estimate) {
-        return Math.abs(precise - estimate + 0.0) /precise*100 + "%";
+        if (precise != 0) {
+            return Math.abs((precise - estimate + 0.0) / precise) * 100 + "%";
+        } else {
+            return "precise: " + precise + " estimate: " + estimate;
+        }
     }
 
     private int getSerializedSize(Serializable ser) {

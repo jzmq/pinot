@@ -1,56 +1,55 @@
 <script src="/assets/js/thirdeye.dimension.heatmap.js"></script>
 
-<div class="uk-button-group heat-map-buttons">
-
-        <button id="dimension-heat-map-filter" class="uk-button dimension-heat-map-filter-btn data-uk-tooltip" title="Only show elements with 0.5% or greater volume change" state="on">
-             <i id="heat-map-filter-icon" class="uk-icon-filter"></i>
-        </button>
-
-        <button class="uk-button dimension-heat-map-help-btn" data-uk-modal="{target:'#dimension-help-modal'}">
-              <i class="uk-icon-question"></i>
-        </button>
+<div class="heat-map-buttons">
+    <button id="dimension-heat-map-filter" class="uk-button dimension-heat-map-filter-btn data-uk-tooltip" title="Only show elements with 0.5% or greater volume change" state="on">
+         <i id="heat-map-filter-icon" class="uk-icon-filter"></i>
+    </button>
 </div>
 
-<div id="dimension-help-modal" class="uk-modal">
-    <div class="uk-modal-dialog">
-        <a class="uk-modal-close uk-close"></a>
-        <h1>Heat Map</h1>
-        <p>
-            The heat map visualization is used to inspect a top-level metric in terms of its
-            different dimension values.
-        </p>
-        <p>
-            Each heat map represents the GROUP BY (dimension) for the current query (shown above the metric view).
-            <br>
-            Clicking a cell of a heat map causes that dimension value to be fixed in the WHERE clause of the query, and all
-            of the heat maps to be re-generated with the new query.
-        </p>
-            <span  class="heat-map-help-img-centered">
-                <img src="/assets/img/heat-map-help-row.png">
-            </span>
-        <br>
-        <section>The cells are:
-            <ul>
-                <li><b>ordered by</b> current volume (highest to lowest),</li>
-                <li><b>colored by</b> the sign of the change (blue means positive, red means negative),</li>
-                <li><b>shaded by</b> previous volume (darker means higher change to the previous volume)</li>
-            </ul>
-        </section>
+<div class="uk-button-group heat-map-buttons" data-uk-button-radio>
+    <button class="uk-button dimension-heat-map-mode" id="dimension-heat-map-mode-self" mode="self">Self</button>
+    <button class="uk-button dimension-heat-map-mode" id="dimension-heat-map-mode-others" mode="others">Others</button>
+    <button class="uk-button dimension-heat-map-mode" id="dimension-heat-map-mode-all" mode="all">All</button>
+</div>
 
-        <div class="heat-map-help-img-centered">
-            <img src="/assets/img/heat-map-help-cell.png">
-        </div>
-
-        <div class="clearfix">
-            <div class="left width-45">
-                The number in the left of each cell is the percent change with respect to the baseline.
-            </div>
-            <div class="right width-45">
-                The number in the right of each cell is the contribution difference; that is, the change in
-                the contribution of one dimension value to the whole.
-            </div>
-        </div>
-    </div>
+<div id="dimension-heat-map-explanation">
+  <div id="dimension-heat-map-explanation-self">
+    <p>
+      Shows percent change with respect to self: <code>(current - baseline) / baseline</code>
+    </p>
+    <p>
+      <em>
+        This view is appropriate for analyzing dimension values in isolation
+      </em>
+    </p>
+  </div>
+  <div id="dimension-heat-map-explanation-others">
+    <p>
+      Shows baseline percentage of whole, and difference with respect to current ratio: <br/>
+      <code>baseline / sum(baseline)</code> +/-<code>(current / sum(current) - baseline / sum(baseline))</code>
+    </p>
+    <p>
+      <em>
+        This view shows displacement among dimension values, which can be used to determine the change
+        of a dimension's composition
+      </em>
+    </p>
+  </div>
+  <div id="dimension-heat-map-explanation-all">
+    <p>
+      Shows contribution to overall change: <code>(current - baseline) / sum(baseline)</code>
+    </p>
+    <p>
+      <em>
+        This view weights dimension values by the total, so it can be used to break down the change in a metric</br>
+        (That is, the heat map cells sum to the overall change in the metric)
+      </em>
+    </p>
+  </div>
+  <p>
+    Cells are ordered in descending order based on current value, and
+    shaded based on baseline value (darker is greater)
+  </p>
 </div>
 
 <div id="dimension-heat-map-area">

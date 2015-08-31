@@ -15,6 +15,7 @@
  */
 package com.linkedin.pinot.server.starter.helix;
 
+import com.linkedin.pinot.common.Utils;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -88,8 +89,11 @@ public class HelixServerStarter {
 
     pinotHelixProperties.addProperty("pinot.server.instance.id", _instanceId);
     startServerInstance(pinotHelixProperties);
+
+    // Replace all white-spaces from list of zkServers.
+    String zkServers = zkServer.replaceAll("\\s+", "");
     _helixManager =
-        HelixManagerFactory.getZKHelixManager(helixClusterName, _instanceId, InstanceType.PARTICIPANT, zkServer);
+        HelixManagerFactory.getZKHelixManager(helixClusterName, _instanceId, InstanceType.PARTICIPANT, zkServers);
     final StateMachineEngine stateMachineEngine = _helixManager.getStateMachineEngine();
     _helixManager.connect();
     ZkHelixPropertyStore<ZNRecord> zkPropertyStore = ZkUtils.getZkPropertyStore(_helixManager, helixClusterName);
@@ -129,6 +133,8 @@ public class HelixServerStarter {
   }
 
   private void startServerInstance(Configuration moreConfigurations) throws Exception {
+    Utils.logVersions();
+
     _serverConf = getInstanceServerConfig(moreConfigurations);
     if (_serverInstance == null) {
       LOGGER.info("Trying to create a new ServerInstance!");

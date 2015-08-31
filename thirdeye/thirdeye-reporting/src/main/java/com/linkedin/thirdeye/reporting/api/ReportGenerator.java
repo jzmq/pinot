@@ -38,8 +38,8 @@ import com.linkedin.thirdeye.api.DimensionKey;
 import com.linkedin.thirdeye.api.MetricSchema;
 import com.linkedin.thirdeye.api.MetricTimeSeries;
 import com.linkedin.thirdeye.api.StarTreeConfig;
-import com.linkedin.thirdeye.dashboard.api.QueryResult;
-import com.linkedin.thirdeye.dashboard.util.SqlUtils;
+import com.linkedin.thirdeye.client.ThirdEyeRawResponse;
+import com.linkedin.thirdeye.client.util.SqlUtils;
 import com.linkedin.thirdeye.reporting.api.anomaly.AnomalyReportGenerator;
 import com.linkedin.thirdeye.reporting.api.anomaly.AnomalyReportTable;
 
@@ -99,6 +99,7 @@ public class ReportGenerator implements Job{
         reportConfig.setEndTime(currentEndHour.withZone(DateTimeZone.forID(reportConfig.getTimezone())));
         reportConfig.setEndTimeString(ReportConstants.DATE_TIME_FORMATTER.print(reportConfig.getEndTime()));
 
+
         URL thirdeyeUri = getThirdeyeURL(tableSpec, scheduleSpec,
             baselineEndHour.minus(TimeUnit.MILLISECONDS.convert(DEFAULT_AGGREGATION_GRANULARITY, DEFAULT_AGGREGATION_UNIT)),
             currentEndHour.minus(TimeUnit.MILLISECONDS.convert(DEFAULT_AGGREGATION_GRANULARITY, DEFAULT_AGGREGATION_UNIT)));
@@ -124,8 +125,8 @@ public class ReportGenerator implements Job{
             String currentSql = SqlUtils.getSql(metric, collection, currentStartHour, currentEndHour, dimensionValues);
             String baselineSql = SqlUtils.getSql(metric, collection, baselineStartHour, baselineEndHour, dimensionValues);
 
-            QueryResult currentQueryResult = getReport(currentSql);
-            QueryResult baselineQueryResult = getReport(baselineSql);
+            ThirdEyeRawResponse currentQueryResult = getReport(currentSql);
+            ThirdEyeRawResponse baselineQueryResult = getReport(baselineSql);
 
             Map<DimensionKey, Number> currentReportOutput = applyFilters(currentQueryResult, tableSpec, metric, currentStartHour, currentEndHour);
             Map<DimensionKey, Number> baselineReportOutput = applyFilters(baselineQueryResult, tableSpec, metric, baselineStartHour, baselineEndHour);
@@ -179,8 +180,9 @@ public class ReportGenerator implements Job{
   }
 
 
+
   private URL getThirdeyeURL(TableSpec tableSpec, ScheduleSpec scheduleSpec, DateTime start, DateTime end) throws MalformedURLException {
-    ThirdeyeUri thirdeyeUri = new ThirdeyeUri(dashboardUri, collection, scheduleSpec, tableSpec, start.getMillis(), end.getMillis());
+    ThirdeyeUri thirdeyeUri = new ThirdeyeUri(reportConfig.getDashboardUri(), collection, scheduleSpec, tableSpec, start.getMillis(), end.getMillis());
     return thirdeyeUri.getThirdeyeUri();
   }
 
@@ -337,7 +339,7 @@ e.printStackTrace();
   }
 
 
-  private Map<DimensionKey, Number> applyFilters(QueryResult queryResult, TableSpec tableSpec, String metric, DateTime startTime, DateTime endTime) {
+  private Map<DimensionKey, Number> applyFilters(ThirdEyeRawResponse queryResult, TableSpec tableSpec, String metric, DateTime startTime, DateTime endTime) {
 
     Map<DimensionKey, Number> reportOutput = new HashMap<DimensionKey, Number>();
 
@@ -375,9 +377,14 @@ e.printStackTrace();
     }
 
     // get metric position
-    int metricPosition = queryResult.getMetrics().indexOf(metric);
-
+    int metricPosition = 0;
     MetricSchema schema = MetricSchema.fromMetricSpecs(starTreeConfig.getMetrics());
+    for (int i = 0; i < starTreeConfig.getMetrics().size(); i ++) {
+      if (metric.equals(starTreeConfig.getMetrics().get(i).getName())) {
+        metricPosition = i;
+        break;
+      }
+    }
 
     for (Entry<String, Map<String, Number[]>> entry : queryResult.getData().entrySet()) {
       DimensionKey dimensionKey = createDimensionKey(entry.getKey());
@@ -385,7 +392,8 @@ e.printStackTrace();
       MetricTimeSeries series = new MetricTimeSeries(schema);
       for (Entry<String, Number[]> dataEntry : data.entrySet()) {
         if (!String.valueOf(endTime.getMillis()).equals(dataEntry.getKey())) {
-          series.set(Long.valueOf(dataEntry.getKey()), metric, dataEntry.getValue()[metricPosition]);
+          int position = queryResult.getMetrics().indexOf(metric);
+          series.set(Long.valueOf(dataEntry.getKey()), metric, dataEntry.getValue()[position]);
         }
       }
       Number[] seriesSums = series.getMetricSums();
@@ -412,10 +420,10 @@ e.printStackTrace();
 
 
 
-  private QueryResult getReport(String sql) throws IOException {
+  private ThirdEyeRawResponse getReport(String sql) throws IOException {
 
     URL url = new URL(serverUri + "/query/" + URLEncoder.encode(sql, "UTF-8"));
-    return OBJECT_MAPPER.readValue((new InputStreamReader(url.openStream(), "UTF-8")), QueryResult.class);
+    return OBJECT_MAPPER.readValue((new InputStreamReader(url.openStream(), "UTF-8")), ThirdEyeRawResponse.class);
   }
 
   private StarTreeConfig getStarTreeConfig() throws JsonParseException, JsonMappingException, UnsupportedEncodingException, IOException {
@@ -423,5 +431,7 @@ e.printStackTrace();
     URL url = new URL(serverUri + "/collections/" + collection);
     return OBJECT_MAPPER.readValue((new InputStreamReader(url.openStream(), "UTF-8")), StarTreeConfig.class);
   }
+
+
 
 }

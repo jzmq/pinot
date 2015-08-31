@@ -2,8 +2,10 @@ $(document).ready(function() {
     var path = parsePath(window.location.pathname)
 
     // Derived metrics
-    $("#sidenav-derived-metrics-add").click(function(event) {
-        event.preventDefault()
+    var addDerivedMetric = function(event) {
+        if (event) {
+            event.preventDefault()
+        }
 
         var derivedMetrics = [
             { type: "RATIO", numArgs: 2 }
@@ -41,7 +43,8 @@ $(document).ready(function() {
 
         var inputs = $("<div></div>")
         controls.append(inputs)
-        select.change(function() {
+
+        var selectChange = function() {
             inputs.empty()
             var selected = select.find(':selected')
             var idx = $(selected).attr('idx')
@@ -67,10 +70,13 @@ $(document).ready(function() {
 
                 inputs.append(metricSelect)
             }
-        })
+        }
 
-        select.trigger('change')
-    })
+        select.change(selectChange)
+        selectChange()
+    }
+
+    $("#sidenav-derived-metrics-add").click(addDerivedMetric)
 
     // Moving average toggle
     $("#sidenav-moving-average").change(function() {
@@ -81,7 +87,6 @@ $(document).ready(function() {
             $("#sidenav-moving-average-controls").hide()
         }
     })
-
 
     // Generate Timezone drop down
     var timezones = moment.tz.names()
@@ -131,7 +136,7 @@ $(document).ready(function() {
       var derivedMetrics = []
       $.each(metricFunctionObj.args, function(i, arg) {
         if (typeof(arg) === 'string') {
-            primitiveMetrics.push(arg)
+            primitiveMetrics.push(arg.replace(/'/g, ""))
         } else {
             derivedMetrics.push(arg)
         }
@@ -147,13 +152,12 @@ $(document).ready(function() {
 
       // Add derived metrics
       $.each(derivedMetrics, function(i, derivedMetric) {
-        $("#sidenav-derived-metrics-add").trigger('click')
+        addDerivedMetric() // appends a new element to list
         var metricElements = $("#sidenav-derived-metrics-list .uk-form-row")
         var metricElement = $(metricElements[metricElements.length - 1])
         metricElement.find(".derived-metric-type").val(derivedMetric.name)
         $.each(derivedMetric.args, function(j, arg) {
-            var input = $("#" + derivedMetric.name + "-arg" + j)
-            input.val(arg)
+            metricElement.find('#' + derivedMetric.name + '-arg' + j).val(arg.replace(/'/g, ""))
         })
       })
     }
@@ -210,7 +214,7 @@ $(document).ready(function() {
         $(".sidenav-metric").each(function(i, checkbox) {
             var checkboxObj = $(checkbox)
             if (checkboxObj.is(':checked')) {
-                metrics.push(checkboxObj.val())
+                metrics.push("'" + checkboxObj.val() + "'")
             }
         })
 
@@ -219,7 +223,7 @@ $(document).ready(function() {
             var type = $(row).find(".derived-metric-type").find(":selected").val()
             var args = []
             $(row).find(".derived-metric-arg").each(function(j, arg) {
-                args.push($(arg).find(":selected").val())
+                args.push("'" + $(arg).find(":selected").val() + "'")
             })
             metrics.push(type + '(' + args.join(',') + ')')
         })
@@ -249,6 +253,11 @@ $(document).ready(function() {
         // Timezone
         var timezone = $("#sidenav-timezone").val()
 
+        // Aggregate
+        var aggregateSize = parseInt($("#sidenav-aggregate-size").val())
+        var aggregateUnit = $("#sidenav-aggregate-unit").val()
+        var aggregateMillis = toMillis(aggregateSize, aggregateUnit)
+
         // Baseline
         var baselineSize = parseInt($("#sidenav-baseline-size").val())
         var baselineUnit = parseInt($("#sidenav-baseline-unit").val())
@@ -258,11 +267,6 @@ $(document).ready(function() {
         var baseline = moment(current.valueOf() - (baselineSize * baselineUnit))
         var currentMillisUTC = current.utc().valueOf()
         var baselineMillisUTC = baseline.utc().valueOf()
-
-        // Aggregate
-        var aggregateSize = parseInt($("#sidenav-aggregate-size").val())
-        var aggregateUnit = $("#sidenav-aggregate-unit").val()
-        var aggregateMillis = toMillis(aggregateSize, aggregateUnit)
 
         // Metric function
         var metricFunction = metrics.join(",")

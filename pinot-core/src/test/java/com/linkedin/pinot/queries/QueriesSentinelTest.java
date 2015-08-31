@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import com.linkedin.pinot.core.query.aggregation.function.quantile.tdigest.TDigest;
 import org.antlr.runtime.RecognitionException;
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.commons.io.FileUtils;
@@ -104,11 +105,14 @@ public class QueriesSentinelTest {
     QUERY_EXECUTOR = new ServerQueryExecutorV1Impl(false);
     QUERY_EXECUTOR.init(serverConf.subset("pinot.server.query.executor"), instanceDataManager, new ServerMetrics(
         new MetricsRegistry()));
+
+    TDigest.TEST_ENABLED = true;
   }
 
   @AfterClass
   public void tearDown() {
     FileUtils.deleteQuietly(INDEX_DIR);
+    TDigest.TEST_ENABLED = false;
   }
 
   private void runApproximationQueries(List<? extends AvroQueryGenerator.TestAggreationQuery> queries, double precision)
@@ -198,7 +202,7 @@ public class QueriesSentinelTest {
       aggCalls.add(new TestSimpleAggreationQuery("select percentileest50(column" + i + ") from testTable limit 0", 0.0));
     }
 
-    runApproximationQueries(aggCalls, 0.05);
+    runApproximationQueries(aggCalls, 0.1);
   }
 
   @Test
@@ -213,7 +217,7 @@ public class QueriesSentinelTest {
       groupByCalls.add(new TestGroupByAggreationQuery("select percentileest50(column1) from testTable group by column" + i + " top " + top + " limit 0", null));
     }
 
-    runApproximationQueries(groupByCalls, 0.05);
+    runApproximationQueries(groupByCalls, 0.1);
   }
 
   @Test

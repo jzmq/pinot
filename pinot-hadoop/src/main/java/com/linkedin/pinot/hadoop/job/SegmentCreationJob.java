@@ -15,8 +15,13 @@
  */
 package com.linkedin.pinot.hadoop.job;
 
-import com.linkedin.pinot.common.data.Schema;
-import com.linkedin.pinot.hadoop.job.mapper.HadoopSegmentCreationMapReduceJob.HadoopSegmentCreationMapper;
+import com.linkedin.pinot.common.Utils;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Properties;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -35,11 +40,8 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Properties;
+import com.linkedin.pinot.common.data.Schema;
+import com.linkedin.pinot.hadoop.job.mapper.HadoopSegmentCreationMapReduceJob.HadoopSegmentCreationMapper;
 
 
 public class SegmentCreationJob extends Configured {
@@ -73,6 +75,8 @@ public class SegmentCreationJob extends Configured {
     _outputDir = _properties.getProperty(PATH_TO_OUTPUT);
     _stagingDir = new File(_outputDir, TEMP).getAbsolutePath();
     _depsJarPath = _properties.getProperty(PATH_TO_DEPS_JAR, null);
+
+    Utils.logVersions();
 
     LOGGER.info("*********************************************************************");
     LOGGER.info("path.to.input: {}", _inputSegmentDir);
@@ -134,11 +138,6 @@ public class SegmentCreationJob extends Configured {
     if (System.getenv("HADOOP_TOKEN_FILE_LOCATION") != null) {
       job.getConfiguration().set("mapreduce.job.credentials.binary", System.getenv("HADOOP_TOKEN_FILE_LOCATION"));
     }
-
-    job.getConfiguration().set("mapred.child.java.opts","-XX:-UseGCOverheadLimit -XX:+UseParallelGC -XX:ParallelGCThreads=4 " +
-            "-XX:GCTimeRatio=10 -XX:YoungGenerationSizeIncrement=20 -XX:TenuredGenerationSizeIncrement=20 " +
-            "-XX:AdaptiveSizeDecrementScaleFactor=2 -Xmx1536m");
-    job.getConfiguration().set("yarn.app.mapreduce.am.command-opts", "-Xmx1536m");
 
     job.setInputFormatClass(TextInputFormat.class);
     job.setOutputFormatClass(TextOutputFormat.class);

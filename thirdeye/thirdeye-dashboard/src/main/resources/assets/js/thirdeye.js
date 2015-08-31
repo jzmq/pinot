@@ -327,6 +327,8 @@ function renderTimeSeries(container, tooltip, options) {
                 var label = datum.label
                 if (label.indexOf('BASELINE_') >= 0) {
                     label = label.substring('BASELINE_'.length)
+                } else if (label.indexOf('ANOMALY_') >= 0) {
+                    label = label.substring('ANOMALY_'.length)
                 }
                 label = label.substring(0, label.indexOf(' '))
                 if (!groups[label]) {
@@ -389,11 +391,24 @@ function plotOne(container, tooltip, options, data) {
         data = options.filter(data)
     }
 
+    // make anomalies display as points instead of lines
+    var dataToPlot = []
+    for (var i = 0; i < data.length; i++) {
+        if (data[i].label.indexOf("ANOMALY_") >= 0) {
+            data[i].lines = { show: false }
+            data[i].points = {
+                show: true,
+                radius: 5,
+            }
+            data[i].color = "red"
+        }
+    }
+
     container.plot(data, {
         legend: {
             show: options.legend == null ? true : options.legend,
-            position: "se",
-            container: options.legendContainer
+                position: "se",
+                container: options.legendContainer
         },
         grid: {
             clickable: true,
@@ -411,7 +426,20 @@ function plotOne(container, tooltip, options, data) {
         if (item) {
             var dateString = moment.utc(item.datapoint[0]).tz(jstz().timezone_name).format()
             var value = item.datapoint[1]
-            tooltip.html(item.series.label + " = " + value + " @ " + dateString)
+            if (item.series.label.indexOf("ANOMALY_") >= 0) {
+                var metric =  item.series.label.substring('ANOMALY_'.length, item.series.label.indexOf(' '))
+                tooltip.html(metric + " = " + value + " @ " + dateString + "<hr>"
+                    + item.series.annotations[item.datapoint[0]].join("<hr>"))
+                    .css({
+                         top: item.pageY + 5,
+                         right: $(window).width() - item.pageX,
+                         'background-color': 'white',
+                         border: '1px solid red',
+                         'z-index': 1000
+                    })
+                    .fadeIn(100)
+            } else {
+                tooltip.html(item.series.label + " = " + value + " @ " + dateString)
                    .css({
                         top: item.pageY + 5,
                         right: $(window).width() - item.pageX,
@@ -420,6 +448,7 @@ function plotOne(container, tooltip, options, data) {
                         'z-index': 1000
                    })
                    .fadeIn(100)
+            }
         } else {
             tooltip.hide()
         }
@@ -666,4 +695,77 @@ function getTimeZone() {
         tz = timeZone.timezone_name
     }
     return tz
+}
+
+function updateTableOrder(tableContainer, orderContainer) {
+  // Get column headers
+  var currentOrder = $.map(tableContainer.find("thead tr").first().find("th"), function(elt) { 
+    return $.trim(elt.innerHTML) 
+  }).slice(1) // for time column
+
+  // Get columns
+  var columns = {}
+  for (var i = 0; i < currentOrder.length; i++) {
+    columns[currentOrder[i]] = []
+  }
+  var tableRows = tableContainer.find("tbody tr")
+  for (var i = 0; i < tableRows.size(); i++) {
+    var tableCols = $(tableRows[i]).find("td")
+    for (var j = 0; j < currentOrder.length; j++) {
+      var colIdx = 1 + j * 3 // n.b. first column time
+      //columns[j].push({
+      columns[currentOrder[j]].push({
+        current: tableCols[colIdx].innerHTML,
+        baseline: tableCols[colIdx + 1].innerHTML,
+        ratio: tableCols[colIdx + 2].innerHTML
+      })
+    }
+  }
+
+  // Get the desired ordering of metric columns
+  var nextOrder = $.map(orderContainer.find("li div"), function(elt) { 
+    return $.trim(elt.innerHTML)
+  })
+
+  // Re-write the column headers
+  tableContainer.find("thead tr").first().find("th").each(function(i, elt) {
+    if (i > 0) { // first is time column
+      var metricIndex = i - 1
+      var currentMetric = currentOrder[metricIndex]
+      var nextMetric = nextOrder[metricIndex]
+      $(elt).html(nextMetric)
+    }
+  })
+
+  // Re-write the columns
+  for (var i = 0; i < tableRows.size(); i++) {
+    var tableCols = $(tableRows[i]).find("td")
+    for (var j = 0; j < currentOrder.length; j++) {
+      var nextMetric = nextOrder[j]
+      var column = columns[nextMetric]
+
+      // This is relative to the table itself
+      var colIdx = 1 + j * 3;
+      $(tableCols[colIdx]).html(column[i].current)
+      $(tableCols[colIdx + 1]).html(column[i].baseline)
+      $(tableCols[colIdx + 2]).html(column[i].ratio)
+
+      // Set the right class for the value
+      var ratio = parseFloat(column[i].ratio)
+      var ratioCell = $(tableCols[colIdx + 2])
+      ratioCell.removeClass('metric-table-down-cell metric-table-same-cell')
+      if (ratio < 0) {
+        ratioCell.addClass('metric-table-down-cell')
+      } else if (ratio == 0) {
+        ratioCell.addClass('metric-table-same-cell')
+      }
+    }
+  }
+
+  // Set hash parameter
+  var hashParams = parseHashParameters(window.location.hash)
+  $.each(nextOrder, function(i, elt) {
+    hashParams['intraDayOrder_' + i] = elt
+  })
+  window.location.hash = encodeHashParameters(hashParams)
 }

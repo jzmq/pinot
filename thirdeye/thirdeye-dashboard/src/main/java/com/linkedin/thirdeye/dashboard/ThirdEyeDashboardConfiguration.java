@@ -1,6 +1,8 @@
 package com.linkedin.thirdeye.dashboard;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.linkedin.thirdeye.anomaly.api.AnomalyDatabaseConfig;
+
 import io.dropwizard.Configuration;
 import io.dropwizard.client.HttpClientConfiguration;
 
@@ -15,6 +17,10 @@ public class ThirdEyeDashboardConfiguration extends Configuration {
 
   private String customDashboardRoot; // directory where all {dashboard}.yml files are saved
 
+  private String collectionConfigRoot; // directory where all collection configs are defined
+
+  private AnomalyDatabaseConfig anomalyDatabaseConfig; // information for the anomaly database
+
   @Valid
   @NotNull
   @JsonProperty
@@ -27,7 +33,7 @@ public class ThirdEyeDashboardConfiguration extends Configuration {
   public String getServerUri() {
     return serverUri;
   }
-  
+
   public String getFeedbackEmailAddress() {
     return feedbackEmailAddress;
   }
@@ -42,5 +48,21 @@ public class ThirdEyeDashboardConfiguration extends Configuration {
 
   public void setCustomDashboardRoot(String customDashboardRoot) {
     this.customDashboardRoot = customDashboardRoot;
+  }
+
+  public String getCollectionConfigRoot() {
+    return collectionConfigRoot;
+  }
+
+  public void setCollectionConfigRoot(String collectionConfigRoot) {
+    this.collectionConfigRoot = collectionConfigRoot;
+  }
+
+  public AnomalyDatabaseConfig getAnomalyDatabaseConfig() {
+    return anomalyDatabaseConfig;
+  }
+
+  public void setAnomalyDatabaseConfig(AnomalyDatabaseConfig anomalyDatabaseConfig) {
+    this.anomalyDatabaseConfig = anomalyDatabaseConfig;
   }
 }

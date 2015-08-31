@@ -1,21 +1,23 @@
 package com.linkedin.thirdeye.anomaly.builtin;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.databind.util.LRUMap;
 import com.linkedin.thirdeye.anomaly.api.FunctionProperties;
 import com.linkedin.thirdeye.anomaly.api.ResultProperties;
-import com.linkedin.thirdeye.anomaly.api.external.AnomalyDetectionFunction;
-import com.linkedin.thirdeye.anomaly.api.external.AnomalyResult;
+import com.linkedin.thirdeye.anomaly.api.function.AnomalyDetectionFunction;
+import com.linkedin.thirdeye.anomaly.api.function.AnomalyResult;
 import com.linkedin.thirdeye.anomaly.exception.FunctionDidNotEvaluateException;
 import com.linkedin.thirdeye.anomaly.exception.IllegalFunctionException;
 import com.linkedin.thirdeye.anomaly.lib.fanomaly.FanomalyDataPoint;
@@ -38,6 +40,40 @@ public class KalmanAnomalyDetectionFunction implements AnomalyDetectionFunction 
   private static final String PROP_DEFAULT_ORDER = "1";
   private static final String PROP_DEFAULT_P_VALUE_THRESHOLD = "0.05";
 
+  /**
+   * Previous function state by kv. TODO : this is a hack...
+   *
+   * Save the EstimatedStateNoise with keys identified by dimensionKey and the functionConfig.
+   *  - This doesn't improve worst case performance (cold-start)
+   *  - Seeding optimization with a previous EstimatedStateNoise speeds up convergence by 3-5x.
+   *  - This is kept in memory to avoid bad state from persisting between runs.
+   *  - If there are 10000 series being analyzed on a single machine every hour, then we probably need more machines.
+   */
+  private static final LRUMap<String, Double> NON_DURABLE_STATE_KV_PAIRS = new LRUMap<>(100, 10000);
+
+  /**
+   * @param functionProperties
+   * @param dimensionKey
+   * @return
+   *  Key uniquely identifying this function configuration and the dimension key it is run on.
+   */
+  private static final String getKVMapKeyString(FunctionProperties functionProperties, DimensionKey dimensionKey) {
+    MessageDigest md = null;
+    try {
+      md = MessageDigest.getInstance("MD5");
+    } catch (NoSuchAlgorithmException e) {
+      LOGGER.error("no md5 available", e);
+    }
+    md.update(functionProperties.toString().getBytes());
+    md.update(dimensionKey.toString().getBytes());
+    byte[] digest = md.digest();
+    StringBuffer sb = new StringBuffer();
+    for (byte b : digest) {
+      sb.append(String.format("%02x", b & 0xff));
+    }
+    return sb.toString();
+  }
+
   private String metric;
   private double pValueThreshold;
 
@@ -56,9 +92,11 @@ public class KalmanAnomalyDetectionFunction implements AnomalyDetectionFunction 
   private int seasonal;
 //  private double seasonalLevel;
 
+  private FunctionProperties functionConfig;
+
   /**
    * {@inheritDoc}
-   * @see com.linkedin.thirdeye.anomaly.api.external.AnomalyDetectionFunction#init(com.linkedin.thirdeye.anomaly.api.external.StarTreeConfig, com.linkedin.thirdeye.anomaly.api.FunctionProperties)
+   * @see com.linkedin.thirdeye.anomaly.api.function.AnomalyDetectionFunction#init(com.linkedin.thirdeye.anomaly.api.function.StarTreeConfig, com.linkedin.thirdeye.anomaly.api.FunctionProperties)
    */
   @Override
   public void init(StarTreeConfig starTreeConfig, FunctionProperties functionConfig) throws IllegalFunctionException {
@@ -94,11 +132,13 @@ public class KalmanAnomalyDetectionFunction implements AnomalyDetectionFunction 
 //    if (seasonal > 0) {
 //      seasonalLevel = Double.parseDouble(functionConfig.getProperty("seasonalLevel"));
 //    }
+
+    this.functionConfig = functionConfig;
   }
 
   /**
    * {@inheritDoc}
-   * @see com.linkedin.thirdeye.anomaly.api.external.AnomalyDetectionFunction#getTrainingWindowTimeGranularity()
+   * @see com.linkedin.thirdeye.anomaly.api.function.AnomalyDetectionFunction#getTrainingWindowTimeGranularity()
    */
   @Override
   public TimeGranularity getTrainingWindowTimeGranularity() {
@@ -107,7 +147,7 @@ public class KalmanAnomalyDetectionFunction implements AnomalyDetectionFunction 
 
   /**
    * {@inheritDoc}
-   * @see com.linkedin.thirdeye.anomaly.api.external.AnomalyDetectionFunction#getAggregationTimeGranularity()
+   * @see com.linkedin.thirdeye.anomaly.api.function.AnomalyDetectionFunction#getAggregationTimeGranularity()
    */
   @Override
   public TimeGranularity getAggregationTimeGranularity() {
@@ -116,7 +156,7 @@ public class KalmanAnomalyDetectionFunction implements AnomalyDetectionFunction 
 
   /**
    * {@inheritDoc}
-   * @see com.linkedin.thirdeye.anomaly.api.external.AnomalyDetectionFunction#getMetrics()
+   * @see com.linkedin.thirdeye.anomaly.api.function.AnomalyDetectionFunction#getMetrics()
    */
   @Override
   public Set<String> getMetrics() {
@@ -127,40 +167,48 @@ public class KalmanAnomalyDetectionFunction implements AnomalyDetectionFunction 
 
   /**
    * {@inheritDoc}
-   * @see com.linkedin.thirdeye.anomaly.api.external.AnomalyDetectionFunction#analyze(com.linkedin.thirdeye.anomaly.api.external.DimensionKey, com.linkedin.thirdeye.anomaly.api.external.MetricTimeSeries, com.linkedin.thirdeye.anomaly.api.external.TimeRange, java.util.List)
+   * @see com.linkedin.thirdeye.anomaly.api.function.AnomalyDetectionFunction#analyze(com.linkedin.thirdeye.anomaly.api.function.DimensionKey, com.linkedin.thirdeye.anomaly.api.function.MetricTimeSeries, com.linkedin.thirdeye.anomaly.api.function.TimeRange, java.util.List)
    */
   @Override
   public List<AnomalyResult> analyze(DimensionKey dimensionKey, MetricTimeSeries series, TimeRange detectionInterval,
       List<AnomalyResult> anomalyHistory) {
 
+    long trainStartInput = Collections.min(series.getTimeWindowSet());
+    long trainEndInput = Collections.max(series.getTimeWindowSet());
+    long bucketMillis = bucketUnit.toMillis(bucketSize);
+
     /*
      * Convert data input to arrays
      */
-    int numObservations = series.getTimeWindowSet().size();
+    int numObservations = (int) (1 + ((trainEndInput - trainStartInput) / bucketMillis));
     double[] observations = new double[numObservations];
     long[] timestamps = new long[numObservations];
 
-    int observationIndex = 0;
-    TreeSet<Long> sortedTimestamps = new TreeSet<Long>(series.getTimeWindowSet()); // sort it
-    for (long observationTimeStamp : sortedTimestamps) {
-      observations[observationIndex] = series.get(observationTimeStamp, metric).doubleValue();
-      timestamps[observationIndex] = observationTimeStamp;
-      observationIndex++;
+    for (int i = 0; i < numObservations; i++) {
+      long timeWindow = trainStartInput + (i * bucketMillis);
+      timestamps[i] = timeWindow;
+      if (series.getTimeWindowSet().contains(timeWindow)) {
+        observations[i] = series.get(timeWindow, metric).doubleValue();
+      } else {
+        observations[i] = 0.0;
+      }
+    }
+
+    if (numObservations != series.getTimeWindowSet().size()) {
+      LOGGER.warn("looks like there are holes in the data: expected {} timestamps, actual {}", numObservations,
+          series.getTimeWindowSet().size());
     }
     /*
      * Done converting data input
      */
 
     /*
-     * Configure omit timestamps TODO: this causes a null pointer
+     * Configure omit timestamps
      */
     Set<Long> omitTimestamps = new HashSet<Long>();
     for (AnomalyResult ar : anomalyHistory) {
-//      omitTimestamps.add(ar.getTimeWindow());
+      omitTimestamps.add(ar.getTimeWindow());
     }
-
-    long trainStartInput = sortedTimestamps.first();
-    long trainEndInput = sortedTimestamps.last();
 
     StateSpaceAnomalyDetector stateSpaceDetector = new StateSpaceAnomalyDetector(
         trainStartInput,
@@ -174,13 +222,23 @@ public class KalmanAnomalyDetectionFunction implements AnomalyDetectionFunction 
         1, // outputStates
         r);
 
+    // cached state hack
+    final String FUNCTION_INVOCATION_STATE_KEY = getKVMapKeyString(functionConfig, dimensionKey);
+    Double initialEstimatedStateNoise = NON_DURABLE_STATE_KV_PAIRS.get(FUNCTION_INVOCATION_STATE_KEY);
+    if (initialEstimatedStateNoise != null) {
+      stateSpaceDetector.setInitialEstimatedStateNoise(initialEstimatedStateNoise);
+    }
+
     Map<Long, FanomalyDataPoint> fAnomalyDataPoints;
     try {
       LOGGER.info("detecting anomalies using fanomaly");
       long offset = TimeUnit.MILLISECONDS.convert(bucketSize, bucketUnit);
       long startTime = System.nanoTime();
       fAnomalyDataPoints = stateSpaceDetector.DetectAnomaly(observations, timestamps, offset);
-      LOGGER.info("jblas took {} seconds", TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime));
+      LOGGER.info("algorithm took {} seconds", TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime));
+
+      // cached state
+      NON_DURABLE_STATE_KV_PAIRS.put(FUNCTION_INVOCATION_STATE_KEY, stateSpaceDetector.getEstimatedStateNoise());
 
     } catch (Exception e) {
       throw new FunctionDidNotEvaluateException("something went wrong", e);
@@ -191,10 +249,6 @@ public class KalmanAnomalyDetectionFunction implements AnomalyDetectionFunction 
     for (long timeWindow : new TreeSet<>(fAnomalyDataPoints.keySet()))
     {
       FanomalyDataPoint fAnomalyDataPoint = fAnomalyDataPoints.get(timeWindow);
-
-//      System.err.println("RAWOUTPUT " + dimensionKey + "\t" + entry.getKey() + "\t" + fAnomalyDataPoint.actualValue
-//          + "\t" + fAnomalyDataPoint.predictedValue + "\t" + fAnomalyDataPoint.stdError + "\t"
-//          + fAnomalyDataPoint.pValue);
 
       if (fAnomalyDataPoint.pValue < pValueThreshold)
       {
@@ -212,5 +266,4 @@ public class KalmanAnomalyDetectionFunction implements AnomalyDetectionFunction 
 
     return anomalyResults;
   }
-
 }

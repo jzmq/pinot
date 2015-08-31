@@ -21,8 +21,6 @@ public class ThirdEyeQueryExecutor {
   private static final Logger LOGGER = LoggerFactory.getLogger(ThirdEyeQueryExecutor.class);
   private static final Joiner OR_JOINER = Joiner.on(" OR ");
 
-  private static final ThirdEyeFunction TO_MILLIS = new ThirdEyeUnitConversionFunction(1, TimeUnit.MILLISECONDS);
-
   private final ExecutorService executorService;
   private final StarTreeManager starTreeManager;
   private static Map<String, Integer> timeGranularitySortOrder = new HashMap<String, Integer>();
@@ -174,16 +172,7 @@ public class ThirdEyeQueryExecutor {
           dimensionSetFutures.add(executorService.submit(new Callable<Set<String>>() {
             @Override
             public Set<String> call() throws Exception {
-              // TODO: Support multiple values per dimension
-              Multimap<String, String> values = query.getDimensionValues();
-              Map<String, String> singleValues = new HashMap<>(values.size());
-              for (Map.Entry<String, String> entry : query.getDimensionValues().entries()) {
-                if (singleValues.containsKey(entry.getKey())) {
-                  throw new IllegalArgumentException("Multiple values currently not supported: " + values);
-                }
-                singleValues.put(entry.getKey(), entry.getValue());
-              }
-              return starTree.getDimensionValues(groupByColumn, singleValues);
+              return starTree.getDimensionValues(groupByColumn, query.getDimensionValues().asMap());
             }
           }));
         }
@@ -260,8 +249,16 @@ public class ThirdEyeQueryExecutor {
       for (ThirdEyeFunction function : query.getDerivedMetrics()) {
         timeSeries = function.apply(config, query, timeSeries);
       }
+      // Retain only the specified metrics
+      List<String> resultMetrics = new ArrayList<>();
+      resultMetrics.addAll(query.getMetricNames());
+      for (ThirdEyeFunction function : query.getDerivedMetrics()) {
+        resultMetrics.add(function.toString()); // e.g. RATIO(A,B)
+      }
+
       // Convert to milliseconds
-      timeSeries = TO_MILLIS.apply(config, query, timeSeries);
+      ThirdEyeFunction toMillis = new ThirdEyeUnitConversionFunction(1, TimeUnit.MILLISECONDS, resultMetrics);
+      timeSeries = toMillis.apply(config, query, timeSeries);
       result.addData(entry.getKey(), timeSeries);
       result.setMetrics(timeSeries.getSchema().getNames()); // multiple calls should be idempotent
     }
@@ -286,7 +283,9 @@ public class ThirdEyeQueryExecutor {
       IndexMetadata indexMetadata = treeMetadataMap.get(treeId);
       TimeRange treeTimeRange =
           new TimeRange(indexMetadata.getMinDataTimeMillis(), indexMetadata.getMaxDataTimeMillis());
-      if (!queryTimeRange.isDisjoint(treeTimeRange)) {
+      TimeRange wallClockRange =
+          new TimeRange(indexMetadata.getStartTimeMillis(), indexMetadata.getEndTimeMillis());
+      if ((!queryTimeRange.isDisjoint(treeTimeRange) || !queryTimeRange.isDisjoint(wallClockRange)) && !treeIds.contains(treeId)) {
         treeIds.add(treeId);
       }
     }

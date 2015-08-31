@@ -15,8 +15,11 @@
  */
 package com.linkedin.pinot.tools.admin;
 
+import java.lang.reflect.Field;
+
 import com.linkedin.pinot.tools.admin.command.*;
 import org.kohsuke.args4j.Argument;
+import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 import org.kohsuke.args4j.spi.SubCommand;
@@ -24,8 +27,6 @@ import org.kohsuke.args4j.spi.SubCommandHandler;
 import org.kohsuke.args4j.spi.SubCommands;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.lang.reflect.Field;
 
 
 /**
@@ -53,6 +54,7 @@ public class PinotAdministrator {
       @SubCommand(name = "PostQuery", impl = PostQueryCommand.class),
       @SubCommand(name = "StopProcess", impl = StopProcessCommand.class),
       @SubCommand(name = "DeleteCluster", impl = DeleteClusterCommand.class),
+      @SubCommand(name = "AvroSchemaToPinotSchema", impl = AvroSchemaToPinotSchema.class),
       @SubCommand(name = "Rebalance", impl = RebalanceCommand.class),
   })
   Command _subCommand;
@@ -74,8 +76,10 @@ public class PinotAdministrator {
         _subCommand.execute();
       }
 
+    } catch (CmdLineException e) {
+      LOGGER.error("Error: {}", e.getMessage());
     } catch (Exception e) {
-      System.err.println(e.getMessage());
+      LOGGER.error("Exception caught: ", e);
     }
   }
 

@@ -51,8 +51,9 @@ public class BalanceNumSegmentAssignmentStrategy implements SegmentAssignmentStr
 
     List<String> selectedInstances = new ArrayList<String>();
     Map<String, Integer> currentNumSegmentsPerInstanceMap = new HashMap<String, Integer>();
-    List<String> allTaggedInstances = helixAdmin.getInstancesInClusterWithTag(helixClusterName, serverTenantName);
-    for (String instance : allTaggedInstances) {
+//    List<String> allTaggedInstances = helixAdmin.getInstancesInClusterWithTag(helixClusterName, serverTenantName);
+    List<String> allTaggedLiveInstances = helixAdmin.getLiveInstancesInClusterWithTag(helixClusterName,serverTenantName);
+    for (String instance : allTaggedLiveInstances) {
       currentNumSegmentsPerInstanceMap.put(instance, 0);
     }
     ExternalView externalView = helixAdmin.getResourceExternalView(helixClusterName, tableName);

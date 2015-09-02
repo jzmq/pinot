@@ -143,7 +143,7 @@
           <includeConfigurationDirectoryInClasspath>true</includeConfigurationDirectoryInClasspath>
           <assembleDirectory>${project.build.directory}/${project.artifactId}-pkg</assembleDirectory>
           <!-- Extra JVM arguments that will be included in the bin scripts -->
-          <extraJvmArguments>-Xms32G -Xmx48G -Dlog4j.configuration=conf/quickstart-log4j.properties</extraJvmArguments>
+          <extraJvmArguments>-Xms32G -Xmx48G -Dlog4j.configuration=conf/log4j.properties</extraJvmArguments>
           <!-- Generate bin scripts for windows and unix pr default -->
 
           <!--<assembleDirectory>${project.build.directory}/sbin</assembleDirectory>-->

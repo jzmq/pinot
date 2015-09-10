@@ -3,13 +3,9 @@ package com.linkedin.thirdeye.anomaly;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Scanner;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
 
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -22,11 +18,8 @@ import com.linkedin.thirdeye.anomaly.database.AnomalyTable;
 import com.linkedin.thirdeye.anomaly.util.DimensionSpecUtils;
 import com.linkedin.thirdeye.anomaly.util.MetricSpecUtils;
 import com.linkedin.thirdeye.anomaly.util.ResourceUtils;
-import com.linkedin.thirdeye.anomaly.util.ServerUtils;
-import com.linkedin.thirdeye.api.DimensionSpec;
-import com.linkedin.thirdeye.api.MetricSpec;
+import com.linkedin.thirdeye.anomaly.util.ThirdEyeServerUtils;
 import com.linkedin.thirdeye.api.StarTreeConfig;
-import com.linkedin.thirdeye.api.TimeGranularity;
 
 /**
  * This class does everything required to get started with thirdeye-anomaly, creating config files and populating the
@@ -47,7 +40,7 @@ public class ThirdEyeAnomalyDetectionSetup {
     ThirdEyeAnomalyDetectionConfiguration topLevelConfig = getTopLevelConfig(userInput);
 
     // get the star tree config (for sanity checking + automated config)
-    StarTreeConfig starTreeConfig = ServerUtils.getStarTreeConfig(topLevelConfig.getThirdEyeServerHost(),
+    StarTreeConfig starTreeConfig = ThirdEyeServerUtils.getStarTreeConfig(topLevelConfig.getThirdEyeServerHost(),
         topLevelConfig.getThirdEyeServerPort(), topLevelConfig.getCollectionName());
 
     topLevelConfig.setAnomalyDatabaseConfig(getDatabaseConfig(userInput));
@@ -172,26 +165,7 @@ public class ThirdEyeAnomalyDetectionSetup {
     }
 
     if (promptForYN("Do you want to load the default (Kalman filter) algorithm?", userInput)) {
-      String metricsString = promptForInput(
-          "Metrics you want to analyze (delimited by ',', e.g., \"m1,m2,m3\").\n" +
-          "If empty, then all metrics will be monitored.", userInput);
-
-      List<String> validMetrics = MetricSpecUtils.getMetricNames(starTreeConfig.getMetrics());
-
-      List<String> metrics;
-      if (metricsString.equals("")) {
-        // add all metrics
-        metrics = validMetrics;
-      } else {
-        // add only selected metrics
-        metrics = Arrays.asList(metricsString.split(","));
-        for (String metric : metrics) {
-          if (!validMetrics.contains(metric)) {
-            System.err.println("'" + metric + "' is not a valid metric in " + starTreeConfig.getCollection());
-            System.exit(1);
-          }
-        }
-      }
+      List<String> metrics = getMetricsForFunction(userInput, starTreeConfig);
 
       printSectionTitle("inserting functions");
       for (String metric : metrics) {
@@ -204,6 +178,63 @@ public class ThirdEyeAnomalyDetectionSetup {
         config.getAnomalyDatabaseConfig().runSQL(sql);
       }
     }
+
+    if (promptForYN("Do you want to load the default (Scan statistics) algorithm?", userInput)) {
+      List<String> metrics = getMetricsForFunction(userInput, starTreeConfig);
+
+      printSectionTitle("inserting functions");
+      for (String metric : metrics) {
+        String sqlUp = String.format(ResourceUtils.getResourceAsString(
+            "database/generic/insert-scan-statistics-default.sql"),
+            config.getAnomalyDatabaseConfig().getFunctionTableName(),
+            "UP",
+            config.getCollectionName(),
+            metric.trim(),
+            "UP");
+        System.out.println(sqlUp);
+        config.getAnomalyDatabaseConfig().runSQL(sqlUp);
+
+        String sqlDown = String.format(ResourceUtils.getResourceAsString(
+            "database/generic/insert-scan-statistics-default.sql"),
+            config.getAnomalyDatabaseConfig().getFunctionTableName(),
+            "DOWN",
+            config.getCollectionName(),
+            metric.trim(),
+            "DOWN");
+        System.out.println(sqlDown);
+        config.getAnomalyDatabaseConfig().runSQL(sqlDown);
+      }
+    }
+  }
+
+  /**
+   * @param userInput
+   * @param starTreeConfig
+   * @return
+   *  Metrics to use for a function.
+   */
+  private List<String> getMetricsForFunction(Scanner userInput, StarTreeConfig starTreeConfig) {
+    String metricsString = promptForInput(
+        "Metrics you want to analyze (delimited by ',', e.g., \"m1,m2,m3\").\n" +
+        "If empty, then all metrics will be monitored.", userInput);
+
+    List<String> validMetrics = MetricSpecUtils.getMetricNames(starTreeConfig.getMetrics());
+
+    List<String> metrics;
+    if (metricsString.equals("")) {
+      // add all metrics
+      metrics = validMetrics;
+    } else {
+      // add only selected metrics
+      metrics = Arrays.asList(metricsString.split(","));
+      for (String metric : metrics) {
+        if (!validMetrics.contains(metric)) {
+          System.err.println("'" + metric + "' is not a valid metric in " + starTreeConfig.getCollection());
+          System.exit(1);
+        }
+      }
+    }
+    return metrics;
   }
 
   /**
@@ -222,7 +253,6 @@ public class ThirdEyeAnomalyDetectionSetup {
     baseConfig.setCollectionName(collection);
     baseConfig.setThirdEyeServerHost(host);
     baseConfig.setThirdEyeServerPort(port);
-    baseConfig.setDetectionInterval(new TimeGranularity(1, TimeUnit.HOURS));
     return baseConfig;
   }
 

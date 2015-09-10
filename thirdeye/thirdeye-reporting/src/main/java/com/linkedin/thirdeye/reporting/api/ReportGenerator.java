@@ -38,17 +38,19 @@ import com.linkedin.thirdeye.api.DimensionKey;
 import com.linkedin.thirdeye.api.MetricSchema;
 import com.linkedin.thirdeye.api.MetricTimeSeries;
 import com.linkedin.thirdeye.api.StarTreeConfig;
+import com.linkedin.thirdeye.reporting.api.TimeRange;
 import com.linkedin.thirdeye.client.ThirdEyeRawResponse;
 import com.linkedin.thirdeye.client.util.SqlUtils;
 import com.linkedin.thirdeye.reporting.api.anomaly.AnomalyReportGenerator;
 import com.linkedin.thirdeye.reporting.api.anomaly.AnomalyReportTable;
+import com.linkedin.thirdeye.reporting.util.SegmentDescriptorUtils;
 
 
 public class ReportGenerator implements Job{
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ReportGenerator.class);
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-  private static DecimalFormat DOUBLE_FORMAT = new DecimalFormat("#");
+  private static DecimalFormat DOUBLE_FORMAT = new DecimalFormat("0.00");
   private static int DEFAULT_AGGREGATION_GRANULARITY = 1;
   private static TimeUnit DEFAULT_AGGREGATION_UNIT = TimeUnit.HOURS;
 
@@ -80,6 +82,7 @@ public class ReportGenerator implements Job{
 
       List<Table> tables = new ArrayList<Table>();
       Map<String, AnomalyReportTable> anomalyReportTables = null;
+      List<TimeRange> missingSegments = null;
       for (TableSpec tableSpec : reportConfig.getTables()) {
 
         LOGGER.info("Collecting data for table {}", tableSpec);
@@ -99,6 +102,13 @@ public class ReportGenerator implements Job{
         reportConfig.setEndTime(currentEndHour.withZone(DateTimeZone.forID(reportConfig.getTimezone())));
         reportConfig.setEndTimeString(ReportConstants.DATE_TIME_FORMATTER.print(reportConfig.getEndTime()));
 
+        missingSegments = SegmentDescriptorUtils.checkSegments(serverUri, collection, reportConfig.getTimezone(),
+            reportConfig.getStartTime(), reportConfig.getEndTime(),
+            baselineStartHour.withZone(DateTimeZone.forID(reportConfig.getTimezone())),
+            baselineEndHour.withZone(DateTimeZone.forID(reportConfig.getTimezone())));
+        if (missingSegments !=null && missingSegments.size() != 0) {
+          ReportEmailSender.sendErrorReport(missingSegments, scheduleSpec, reportConfig);
+        }
 
         URL thirdeyeUri = getThirdeyeURL(tableSpec, scheduleSpec,
             baselineEndHour.minus(TimeUnit.MILLISECONDS.convert(DEFAULT_AGGREGATION_GRANULARITY, DEFAULT_AGGREGATION_UNIT)),
@@ -171,14 +181,13 @@ public class ReportGenerator implements Job{
 
 
       ReportEmailSender reportEmailSender = new ReportEmailSender(tables, scheduleSpec,
-          reportConfig, anomalyReportTables, templatePath);
+          reportConfig, anomalyReportTables, missingSegments, templatePath);
       reportEmailSender.emailReport();
 
     } catch (IOException e) {
       LOGGER.error(e.toString());
     }
   }
-
 
 
   private URL getThirdeyeURL(TableSpec tableSpec, ScheduleSpec scheduleSpec, DateTime start, DateTime end) throws MalformedURLException {
@@ -331,7 +340,6 @@ try {
 } catch (Exception e) {
 e.printStackTrace();
 }
-
       row.setRatio(DOUBLE_FORMAT.format((row.getCurrent().doubleValue() - row.getBaseline().doubleValue()) / (row.getBaseline().doubleValue()) * 100));
       reportRows.add(row);
     }
@@ -431,7 +439,5 @@ e.printStackTrace();
     URL url = new URL(serverUri + "/collections/" + collection);
     return OBJECT_MAPPER.readValue((new InputStreamReader(url.openStream(), "UTF-8")), StarTreeConfig.class);
   }
-
-
 
 }

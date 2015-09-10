@@ -17,6 +17,8 @@ public final class ReportConstants {
   public static String TABLES_OBJECT = "tables";
   public static String ANOMALY_TABLES_OBJECT = "anomalyTables";
   public static String SCHEDULE_SPEC_OBJECT = "scheduleSpec";
+  public static String MISSING_SEGMENTS_OBJECT = "missingSegments";
+
 
   public static String MAIL_SMTP_HOST_KEY = "mail.smtp.host";
   public static String MAIL_SMTP_HOST_VALUE = "email.corp.linkedin.com";

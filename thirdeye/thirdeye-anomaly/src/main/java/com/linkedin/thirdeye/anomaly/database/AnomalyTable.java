@@ -177,6 +177,7 @@ public class AnomalyTable {
    *
    * @param dbConfig
    * @throws IOException
+   * @throws SQLException
    */
   public static void createTable(AnomalyDatabaseConfig dbConfig) throws IOException {
     dbConfig.runSQL(buildAnomalyTableCreateStmt(dbConfig.getAnomalyTableName()));
@@ -235,15 +236,14 @@ public class AnomalyTable {
 
   /**
    * @param dbconfig
+   * @param functionId
    * @param functionName
    * @param functionDescription
    * @param collection
-   * @param metric
    * @param topLevelOnly
-   * @param startTimeWindow
-   * @param endTimeWidnow
+   * @param orderBy
+   * @param timeRange
    * @return
-   * @throws JsonProcessingException
    */
   private static String buildAnomalyTableSelectStatement(AnomalyDatabaseConfig dbconfig,
       Integer functionId,

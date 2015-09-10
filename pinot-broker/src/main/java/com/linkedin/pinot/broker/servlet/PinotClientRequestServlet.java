@@ -15,6 +15,7 @@
  */
 package com.linkedin.pinot.broker.servlet;
 
+import com.linkedin.pinot.pql.parsers.Pql2Compiler;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.Arrays;
@@ -47,7 +48,8 @@ import com.linkedin.pinot.transport.common.SegmentId;
 
 
 public class PinotClientRequestServlet extends HttpServlet {
-  private static final PQLCompiler requestCompiler = new PQLCompiler(new HashMap<String, String[]>());
+  private static final PQLCompiler requestCompiler = new PQLCompiler(new HashMap<>());
+  private static final Pql2Compiler pql2Compiler = new Pql2Compiler();
 
   private static final long serialVersionUID = -3516093545255816357L;
   private static final Logger LOGGER = LoggerFactory.getLogger(PinotClientRequestServlet.class);
@@ -95,11 +97,30 @@ public class PinotClientRequestServlet extends HttpServlet {
 
   private BrokerResponse handleRequest(JSONObject request) throws Exception {
     final String pql = request.getString("pql");
+    LOGGER.info("Broker received Query String is: {}", pql);
+    boolean isTraceEnabled = false;
+
+    if (request.has("trace")) {
+      try {
+        isTraceEnabled = Boolean.parseBoolean(request.getString("trace"));
+        LOGGER.info("Trace is set to: {}", isTraceEnabled);
+      } catch (Exception e) {
+        LOGGER.warn("Invalid trace value: {}", request.getString("trace"), e);
+      }
+    } else {
+      // ignore, trace is disabled by default
+    }
+
     final long startTime = System.nanoTime();
     final BrokerRequest brokerRequest;
     try {
-      final JSONObject compiled = requestCompiler.compile(pql);
-      brokerRequest = convertToBrokerRequest(compiled);
+      if (request.has("dialect") && "pql2".equals(request.getString("dialect"))) {
+        brokerRequest = pql2Compiler.compileToBrokerRequest(pql);
+      } else {
+        final JSONObject compiled = requestCompiler.compile(pql);
+        brokerRequest = convertToBrokerRequest(compiled);
+      }
+      if (isTraceEnabled) brokerRequest.setEnableTrace(true);
     } catch (Exception e) {
       BrokerResponse brokerResponse = new BrokerResponse();
       brokerResponse.setExceptions(Arrays.asList(QueryException.getException(QueryException.PQL_PARSING_ERROR, e)));
@@ -111,24 +132,24 @@ public class PinotClientRequestServlet extends HttpServlet {
 
     final long requestCompilationTime = System.nanoTime() - startTime;
     brokerMetrics.addPhaseTiming(brokerRequest, BrokerQueryPhase.REQUEST_COMPILATION,
-        requestCompilationTime);
+            requestCompilationTime);
 
     final BrokerResponse resp = brokerMetrics.timePhase(brokerRequest, BrokerQueryPhase.QUERY_EXECUTION,
-        new Callable<BrokerResponse>() {
-          @Override
-          public BrokerResponse call()
-              throws Exception {
-            final BucketingSelection bucketingSelection = getBucketingSelection(brokerRequest);
-            return (BrokerResponse) broker.processBrokerRequest(brokerRequest, bucketingSelection);
-          }
-        });
+            new Callable<BrokerResponse>() {
+              @Override
+              public BrokerResponse call()
+                      throws Exception {
+                final BucketingSelection bucketingSelection = getBucketingSelection(brokerRequest);
+                return (BrokerResponse) broker.processBrokerRequest(brokerRequest, bucketingSelection);
+              }
+            });
 
-    LOGGER.info("Broker Response : " + resp);
+    LOGGER.info("Broker Response : {}", resp);
     return resp;
   }
 
   private BucketingSelection getBucketingSelection(BrokerRequest brokerRequest) {
-    final Map<SegmentId, ServerInstance> bucketMap = new HashMap<SegmentId, ServerInstance>();
+    final Map<SegmentId, ServerInstance> bucketMap = new HashMap<>();
     return new BucketingSelection(bucketMap);
   }
 

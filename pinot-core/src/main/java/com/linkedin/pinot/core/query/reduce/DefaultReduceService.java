@@ -82,11 +82,11 @@ public class DefaultReduceService implements ReduceService {
       reduceOnExceptions(brokerResponse.getExceptions(), serverInstance, instanceResponse.getExceptions());
 
       // debug mode enable : reduceOnTraceInfo
-      if (brokerRequest.isEnableTrace()) {
+      /*if (brokerRequest.isEnableTrace()) {
         reduceOnSegmentStatistics(brokerResponse.getSegmentStatistics(), serverInstance,
             instanceResponse.getSegmentStatistics());
         reduceOnTraceInfos(brokerResponse.getTraceInfo(), serverInstance, instanceResponse.getTraceInfo());
-      }
+      }*/
       // reduceOnNumDocsScanned
       brokerResponse.setNumDocsScanned(brokerResponse.getNumDocsScanned() + instanceResponse.getNumDocsScanned());
       // reduceOnTotalDocs
@@ -97,11 +97,13 @@ public class DefaultReduceService implements ReduceService {
     return brokerResponse;
   }
 
-  private void reduceOnTraceInfos(Map<String, String> brokerTraceInfo, ServerInstance serverInstance,
-      Map<String, String> traceInfoToAdd) {
-    for (String key : traceInfoToAdd.keySet()) {
-      brokerTraceInfo.put(serverInstance.getHostname() + " : " + key, traceInfoToAdd.get(key));
-    }
+  /**
+   * @param brokerTraceInfo
+   * @param serverInstance
+   * @param traceInfoToAdd
+   */
+  private void reduceOnTraceInfos(Map<String, String> brokerTraceInfo, ServerInstance serverInstance, String traceInfoToAdd) {
+    brokerTraceInfo.put(serverInstance.getHostname(), traceInfoToAdd);
   }
 
   private void reduceOnSegmentStatistics(List<ResponseStatistics> brokerSegmentStatistics,
@@ -144,9 +146,15 @@ public class DefaultReduceService implements ReduceService {
           + Long.parseLong(instanceResponse.getMetadata().get(NUM_DOCS_SCANNED)));
       // reduceOnTotalDocs
       brokerResponse.setTotalDocs(brokerResponse.getTotalDocs()
-          + Long.parseLong(instanceResponse.getMetadata().get(TOTAL_DOCS)));
+              + Long.parseLong(instanceResponse.getMetadata().get(TOTAL_DOCS)));
       if (Long.parseLong(instanceResponse.getMetadata().get(TIME_USED_MS)) > brokerResponse.getTimeUsedMs()) {
         brokerResponse.setTimeUsedMs(Long.parseLong(instanceResponse.getMetadata().get(TIME_USED_MS)));
+      }
+      // debug mode enable : reduceOnTraceInfo
+      if (brokerRequest.isEnableTrace()) {
+        reduceOnTraceInfos(brokerResponse.getTraceInfo(),
+                serverInstance,
+                instanceResponse.getMetadata().get("traceInfo"));
       }
     }
     try {

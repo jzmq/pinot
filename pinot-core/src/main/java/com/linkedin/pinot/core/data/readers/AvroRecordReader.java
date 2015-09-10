@@ -15,6 +15,7 @@
  */
 package com.linkedin.pinot.core.data.readers;
 
+import com.linkedin.pinot.common.Utils;
 import com.linkedin.pinot.common.data.FieldSpec;
 import com.linkedin.pinot.common.data.FieldSpec.DataType;
 import com.linkedin.pinot.common.data.Schema;
@@ -43,12 +44,14 @@ import org.slf4j.LoggerFactory;
 
 
 public class AvroRecordReader implements RecordReader {
-  private static final Logger _logger = LoggerFactory.getLogger(AvroRecordReader.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(AvroRecordReader.class);
+
   private static final String COMMA = ",";
 
   private String _fileName = null;
   private DataFileStream<GenericRecord> _dataStream = null;
   private FieldExtractor _schemaExtractor = null;
+  private GenericRecord _genericRecord = null;
 
   private final GenericRow _genericRow = new GenericRow();
   private final Map<String, Object> _fieldMap = new HashMap<String, Object>();
@@ -85,7 +88,14 @@ public class AvroRecordReader implements RecordReader {
 
   @Override
   public GenericRow next() {
-    return _schemaExtractor.transform(getGenericRow(_dataStream.next()));
+    try {
+      _genericRecord = _dataStream.next(_genericRecord);
+      return _schemaExtractor.transform(getGenericRow(_genericRecord));
+    } catch (IOException e) {
+      LOGGER.error("Caught exception while reading record", e);
+      Utils.rethrowException(e);
+      return null;
+    }
   }
 
   private GenericRow getGenericRow(GenericRecord rawRecord) {
@@ -138,7 +148,7 @@ public class AvroRecordReader implements RecordReader {
 
   private void updateSchema(Schema schema) {
     for (final FieldSpec fieldSpec : schema.getAllFieldSpecs()) {
-      _logger.info("fieldSpec=" + fieldSpec.toString());
+      LOGGER.info("fieldSpec=" + fieldSpec.toString());
       fieldSpec.setDataType(getColumnType(_dataStream.getSchema().getField(fieldSpec.getName())));
       fieldSpec.setSingleValueField(isSingleValueField(_dataStream.getSchema().getField(fieldSpec.getName())));
       schema.addSchema(fieldSpec.getName(), fieldSpec);

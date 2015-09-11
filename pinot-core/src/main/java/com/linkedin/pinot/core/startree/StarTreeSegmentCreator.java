@@ -47,6 +47,8 @@ import java.util.*;
 
 public class StarTreeSegmentCreator implements SegmentCreator {
   private static final Logger LOG = LoggerFactory.getLogger(StarTreeSegmentCreator.class);
+  private static final int DEFAULT_STAR_TREE_TABLE_INCREMENT = 1000000;
+  private static final String STAR_TREE_TABLE_FILE_PREFIX = "star_tree_table_";
 
   private StarTreeIndexSpec starTreeIndexSpec; // TODO: Support multiple trees
   private RecordReader recordReader;
@@ -59,9 +61,11 @@ public class StarTreeSegmentCreator implements SegmentCreator {
   private File outDir;
   private File starTreeDir;
   private String segmentName;
+  private File starTreeTableFile;
 
   // Used for indexRow
   private Set<StarTreeIndexNode> currentMatchingNodes;
+  private Map<Integer, Integer> nextDocumentIds;
 
   // Computed
   private List<String> splitOrder;
@@ -85,6 +89,7 @@ public class StarTreeSegmentCreator implements SegmentCreator {
     this.invertedIndexCreatorMap = new HashMap<String, InvertedIndexCreator>();
     this.aggregateForwardIndexCreatorMap = new HashMap<String, ForwardIndexCreator>();
     this.aggregateInvertedIndexCreatorMap = new HashMap<String, InvertedIndexCreator>();
+    this.nextDocumentIds = new HashMap<Integer, Integer>();
   }
 
   @Override
@@ -118,18 +123,33 @@ public class StarTreeSegmentCreator implements SegmentCreator {
 
     // Compute StarTree split order
     splitOrder = computeSplitOrder(columnInfo);
-    LOG.info("Computed split order {}", splitOrder);
+    LOG.info("Computed split order {} (excluded: {})", splitOrder, starTreeIndexSpec.getSplitExcludes());
     List<Integer> splitOrderIndexes = new ArrayList<Integer>();
     for (String dimensionName : splitOrder) {
       Integer dimensionId = starTreeDimensionDictionary.get(dimensionName);
       splitOrderIndexes.add(dimensionId);
     }
-    Collections.reverse(splitOrderIndexes);
+
+    // Get dimension / metric types
+    List<FieldSpec.DataType> dimensionTypes = new ArrayList<>();
+    for (DimensionFieldSpec spec : schema.getDimensionFieldSpecs()) {
+      if (starTreeDimensionDictionary.containsKey(spec.getName())) {
+        dimensionTypes.add(spec.getDataType());
+      }
+    }
+    List<FieldSpec.DataType> metricTypes = new ArrayList<>();
+    for (MetricFieldSpec spec : schema.getMetricFieldSpecs()) {
+      if (starTreeMetricDictionary.containsKey(spec.getName())) {
+        metricTypes.add(spec.getDataType());
+      }
+    }
 
     // StarTree builder / table
-    StarTreeTable table = new LinkedListStarTreeTable(); // TODO: ByteBuffer-based
-    StarTreeDocumentIdMap documentIdMap = new HashMapStarTreeDocumentIdMap(); // TODO: ByteBuffer-based
-    starTreeBuilder.init(splitOrderIndexes, starTreeIndexSpec.getMaxLeafRecords(), table, documentIdMap);
+    starTreeTableFile = new File(System.getProperty("java.io.tmpdir"),
+        STAR_TREE_TABLE_FILE_PREFIX + System.currentTimeMillis());
+    StarTreeTable table = new MmapLinkedListStarTreeTable(
+        dimensionTypes, metricTypes, starTreeTableFile, DEFAULT_STAR_TREE_TABLE_INCREMENT);
+    starTreeBuilder.init(splitOrderIndexes, starTreeIndexSpec.getMaxLeafRecords(), table);
 
     // Build the StarTree structure and table
     LOG.info("Building StarTree table...");
@@ -206,7 +226,7 @@ public class StarTreeSegmentCreator implements SegmentCreator {
                 indexCreationInfo.hasNulls()));
       }
 
-      if (config.createInvertedIndexEnabled()) {
+      if (config.isCreateInvertedIndexEnabled()) {
         invertedIndexCreatorMap.put(
             column,
             new BitmapInvertedIndexCreator(outDir, uniqueValueCount, schema.getFieldSpecFor(column)));
@@ -230,26 +250,28 @@ public class StarTreeSegmentCreator implements SegmentCreator {
       if (!pathValues.containsValue(StarTreeIndexNode.all())) {
         StarTreeTableRange range = starTreeBuilder.getDocumentIdRange(node.getNodeId());
         StarTreeTable subTable = starTreeBuilder.getTable().view(range.getStartDocumentId(), range.getDocumentCount());
+        StarTreeTableRange aggregateAdjustedRange = starTreeBuilder.getAggregateAdjustedDocumentIdRange(node.getNodeId());
 
-        Integer nextMatchingDocumentId = starTreeBuilder.getNextDocumentId(tableRow.getDimensions());
+        // Get next matching document ID
+        Integer nextMatchingDocumentId = nextDocumentIds.get(node.getNodeId());
         if (nextMatchingDocumentId == null) {
-          throw new IllegalStateException("Could not assign document ID for row " + tableRow);
+          nextMatchingDocumentId = aggregateAdjustedRange.getStartDocumentId();
         }
+        nextDocumentIds.put(node.getNodeId(), nextMatchingDocumentId + 1);
 
         // Write using that document ID to all columns
         for (final String column : dictionaryCreatorMap.keySet()) {
           Object columnValueToIndex = row.getValue(column);
           if (schema.getFieldSpecFor(column).isSingleValueField()) {
-            System.out.println(column + ": " + columnValueToIndex);
             int dictionaryIndex = dictionaryCreatorMap.get(column).indexOfSV(columnValueToIndex);
             ((SingleValueForwardIndexCreator)forwardIndexCreatorMap.get(column)).index(nextMatchingDocumentId, dictionaryIndex);
-            if (config.createInvertedIndexEnabled()) {
+            if (config.isCreateInvertedIndexEnabled()) {
               invertedIndexCreatorMap.get(column).add(nextMatchingDocumentId, (Object) dictionaryIndex);
             }
           } else {
             int[] dictionaryIndex = dictionaryCreatorMap.get(column).indexOfMV(columnValueToIndex);
             ((MultiValueForwardIndexCreator)forwardIndexCreatorMap.get(column)).index(nextMatchingDocumentId, dictionaryIndex);
-            if (config.createInvertedIndexEnabled()) {
+            if (config.isCreateInvertedIndexEnabled()) {
               invertedIndexCreatorMap.get(column).add(nextMatchingDocumentId, dictionaryIndex);
             }
           }
@@ -319,7 +341,7 @@ public class StarTreeSegmentCreator implements SegmentCreator {
                 .index(currentAggregateDocumentId, (int[]) dictionaryIndex);
           }
 
-          if (config.createInvertedIndexEnabled()) {
+          if (config.isCreateInvertedIndexEnabled()) {
             aggregateInvertedIndexCreatorMap.get(column).add(currentAggregateDocumentId, dictionaryIndex);
           }
         }
@@ -331,7 +353,7 @@ public class StarTreeSegmentCreator implements SegmentCreator {
 
     for (final String column : forwardIndexCreatorMap.keySet()) {
       forwardIndexCreatorMap.get(column).close();
-      if (config.createInvertedIndexEnabled()) {
+      if (config.isCreateInvertedIndexEnabled()) {
         invertedIndexCreatorMap.get(column).seal();
       }
       dictionaryCreatorMap.get(column).close();
@@ -339,10 +361,9 @@ public class StarTreeSegmentCreator implements SegmentCreator {
 
     for (final String column : aggregateForwardIndexCreatorMap.keySet()) {
       aggregateForwardIndexCreatorMap.get(column).close();
-      if (config.createInvertedIndexEnabled()) {
+      if (config.isCreateInvertedIndexEnabled()) {
         aggregateInvertedIndexCreatorMap.get(column).seal();
       }
-      // n.b. The dictionary from raw data is used
     }
 
     writeMetadata(outDir, starTreeBuilder.getTotalRawDocumentCount());
@@ -371,6 +392,10 @@ public class StarTreeSegmentCreator implements SegmentCreator {
 
     // Write star tree metadata
     writeMetadata(starTreeDir, starTreeBuilder.getTotalAggregateDocumentCount());
+
+    // Delete tmp star tree data
+    LOG.info("Deleting StarTree table file {}", starTreeTableFile);
+    FileUtils.forceDelete(starTreeTableFile);
   }
 
   /** Returns the user-defined split order, or dimensions in order of descending cardinality (removes excludes too) */
@@ -550,13 +575,13 @@ public class StarTreeSegmentCreator implements SegmentCreator {
       properties.setProperty(TIME_UNIT, config.getTimeUnitForSegment());
     }
 
-    if (config.containsKey(SEGMENT_START_TIME)) {
+    if (config.containsCustomPropertyWithKey(SEGMENT_START_TIME)) {
       properties.setProperty(SEGMENT_START_TIME, config.getStartTime());
     }
-    if (config.containsKey(SEGMENT_END_TIME)) {
+    if (config.containsCustomPropertyWithKey(SEGMENT_END_TIME)) {
       properties.setProperty(SEGMENT_END_TIME, config.getStartTime());
     }
-    if (config.containsKey(TIME_UNIT)) {
+    if (config.containsCustomPropertyWithKey(TIME_UNIT)) {
       properties.setProperty(TIME_UNIT, config.getTimeUnitForSegment());
     }
 

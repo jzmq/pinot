@@ -148,7 +148,6 @@ public class AvroRecordReader implements RecordReader {
 
   private void updateSchema(Schema schema) {
     for (final FieldSpec fieldSpec : schema.getAllFieldSpecs()) {
-      LOGGER.info("fieldSpec=" + fieldSpec.toString());
       fieldSpec.setDataType(getColumnType(_dataStream.getSchema().getField(fieldSpec.getName())));
       fieldSpec.setSingleValueField(isSingleValueField(_dataStream.getSchema().getField(fieldSpec.getName())));
       schema.addSchema(fieldSpec.getName(), fieldSpec);

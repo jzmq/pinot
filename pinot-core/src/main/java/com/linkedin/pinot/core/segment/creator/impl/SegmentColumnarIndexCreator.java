@@ -133,7 +133,6 @@ public class SegmentColumnarIndexCreator implements SegmentCreator {
       if (schema.getFieldSpecFor(column).isSingleValueField()) {
         if (indexCreationInfo.isSorted()) {
           forwardIndexCreatorMap.put(column,
-
               new SingleValueSortedForwardIndexCreator(file, uniqueValueCount,
                   schema.getFieldSpecFor(column)));
         } else {

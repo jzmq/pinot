@@ -15,15 +15,20 @@
  */
 package com.linkedin.pinot.core.index.writer.impl;
 
+import com.google.common.primitives.Ints;
 import com.linkedin.pinot.common.utils.MmapUtils;
-import com.linkedin.pinot.core.util.CustomBitSet;
-import org.apache.commons.io.IOUtils;
-
-import java.io.*;
+import java.io.Closeable;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.Arrays;
+
+import com.linkedin.pinot.core.util.CustomBitSet;
+import org.apache.commons.io.IOUtils;
 
 
 /**
@@ -110,8 +115,9 @@ public class FixedBitWidthRowColDataFileWriter implements Closeable {
       this.rowSizeInBits += colSize;
       this.colSizesInBits[i] = colSize;
     }
-    int totalSizeInBits = rowSizeInBits * rows;
-    this.bytesRequired = (totalSizeInBits + 7) / 8;
+    long totalSizeInBits = ((long) rowSizeInBits) * rows;
+    // jfim: We keep the number of bytes required as an int, as Java Buffers cannot be larger than 2GB
+    this.bytesRequired = Ints.checkedCast((totalSizeInBits + 7) / 8);
   }
 
   private void createBuffer(File file) throws FileNotFoundException,
@@ -137,11 +143,7 @@ public class FixedBitWidthRowColDataFileWriter implements Closeable {
    */
   public void setInt(int row, int col, int val) {
     assert val >= minValues[col]  && val <= maxValues[col];
-    // rowSizeInBits = 1
-    // columnOffsetsInBits[0]=0
-    // bitOffset = rowSizeInBits * row + columnOffsetsInBits[col];
-    //=> bitOffset =  row
-    int bitOffset = rowSizeInBits * row + columnOffsetsInBits[col];
+    long bitOffset = ((long) rowSizeInBits) * row + columnOffsetsInBits[col];
     val = val + offsets[col];
     for (int bitPos = colSizesInBits[col] - 1; bitPos >= 0; bitPos--) {
       if ((val & (1 << bitPos)) != 0) {

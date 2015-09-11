@@ -15,16 +15,17 @@
  */
 package com.linkedin.pinot.tools.admin.command;
 
-import com.linkedin.pinot.common.data.Schema;
-import com.linkedin.pinot.common.utils.FileUploadUtils;
-import com.linkedin.pinot.common.utils.NetUtil;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+
 import org.kohsuke.args4j.Option;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
+import com.linkedin.pinot.common.data.Schema;
+import com.linkedin.pinot.common.utils.FileUploadUtils;
+import com.linkedin.pinot.common.utils.NetUtil;
 
 
 public class AddSchemaCommand extends AbstractBaseCommand implements Command {
@@ -33,7 +34,7 @@ public class AddSchemaCommand extends AbstractBaseCommand implements Command {
   @Option(name = "-controllerHost", required = false, metaVar = "<String>", usage = "host name for controller.")
   private String _controllerHost;
 
-  @Option(name = "-controllerPort", required = false, metaVar = "<string>", usage = "port name for controller.")
+  @Option(name = "-controllerPort", required = false, metaVar = "<String>", usage = "port name for controller.")
   private String _controllerPort = DEFAULT_CONTROLLER_PORT;
 
   @Option(name = "-schemaFile", required = true, metaVar = "<string>", usage = "Path to schema file.")

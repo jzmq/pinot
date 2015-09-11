@@ -118,6 +118,12 @@ public class SegmentColumnarIndexCreator implements SegmentCreator {
       }
     }
 
+    if (config.createInvertedIndexEnabled()) {
+      System.out.println("Create Inverted Index Enabled.");
+    }else{
+      System.out.println("Create Inverted Index Disabled.");
+    }
+
     // For each column, build its dictionary and initialize a forwards and an inverted index
     for (final String column : dictionaryCreatorMap.keySet()) {
       dictionaryCreatorMap.get(column).build();

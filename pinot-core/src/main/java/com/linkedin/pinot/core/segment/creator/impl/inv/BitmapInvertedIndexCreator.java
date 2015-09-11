@@ -82,7 +82,7 @@ public class BitmapInvertedIndexCreator implements InvertedIndexCreator {
       element.serialize(out);
     }
     out.close();
-    LOGGER.debug("persisted bitmap inverted index for column : " + spec.getName() + " in "
+    LOGGER.info("persisted bitmap inverted index for column : " + spec.getName() + " in "
         + invertedIndexFile.getAbsolutePath());
   }
 

@@ -149,7 +149,7 @@ public class SegmentCreationJob extends Configured {
     FileOutputFormat.setOutputPath(job, new Path(_stagingDir + "/output/"));
 
     job.getConfiguration().setInt("mapreduce.task.timeout", 3000000);
-    job.getConfiguration().setStrings("yarn.app.mapreduce.am.command-opts", "-Xmx1536m");
+    job.getConfiguration().setStrings("yarn.app.mapreduce.am.command-opts", "-Xmx1800m");
     job.getConfiguration().setInt(JobContext.NUM_MAPS, inputDataFiles.size());
     job.getConfiguration().set("data.schema", new ObjectMapper().writeValueAsString(_dataSchema));
 

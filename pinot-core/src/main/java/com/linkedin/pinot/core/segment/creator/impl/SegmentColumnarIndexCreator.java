@@ -118,7 +118,7 @@ public class SegmentColumnarIndexCreator implements SegmentCreator {
       }
     }
 
-    if (config.createInvertedIndexEnabled()) {
+    if (config.isCreateInvertedIndexEnabled()) {
       System.out.println("Create Inverted Index Enabled.");
     }else{
       System.out.println("Create Inverted Index Disabled.");

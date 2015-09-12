@@ -196,7 +196,7 @@ public class SegmentColumnarIndexCreator implements SegmentCreator {
   public void seal() throws ConfigurationException, IOException {
     for (final String column : forwardIndexCreatorMap.keySet()) {
       forwardIndexCreatorMap.get(column).close();
-      if (config.isCreateInvertedIndexEnabled()) {
+      if (config.isCreateInvertedIndexEnabled() && invertedIndexCreatorMap.containsKey(column)) {
         invertedIndexCreatorMap.get(column).seal();
       }
       dictionaryCreatorMap.get(column).close();

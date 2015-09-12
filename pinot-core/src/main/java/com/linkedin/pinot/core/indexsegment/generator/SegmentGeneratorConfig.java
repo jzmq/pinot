@@ -99,6 +99,17 @@ public class SegmentGeneratorConfig {
     invertedIndexCreationColumns.add(column);
   }
 
+  public void setCreateInvertedIndexForColumn(String column, boolean create){
+    if (createInvertedIndex == false) {
+      createInvertedIndex = true;
+    }
+    if(create==false){
+      invertedIndexCreationColumns.remove(column);
+    }else {
+      invertedIndexCreationColumns.add(column);
+    }
+  }
+
   public void createInvertedIndexForAllColumns() {
     if (schema == null) {
       throw new RuntimeException(

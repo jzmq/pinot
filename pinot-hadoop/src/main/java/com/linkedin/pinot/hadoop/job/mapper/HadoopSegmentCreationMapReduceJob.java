@@ -167,7 +167,6 @@ public class HadoopSegmentCreationMapReduceJob {
         segmentGeneratorConfig.setSegmentNamePostfix(seqId);
       }
       segmentGeneratorConfig.setRecordeReaderConfig(getReaderConfig(fileFormat));
-
       segmentGeneratorConfig.setIndexOutputDir(_localDiskSegmentDirectory);
       segmentGeneratorConfig.createInvertedIndexForAllColumns();
       segmentGeneratorConfig.setCreateInvertedIndexForColumn("admckid", false);

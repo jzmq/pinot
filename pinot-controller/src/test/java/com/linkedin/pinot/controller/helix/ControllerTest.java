@@ -25,7 +25,6 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
 
-import com.linkedin.pinot.core.trace.TraceContext;
 import org.apache.helix.HelixAdmin;
 import org.apache.helix.HelixManager;
 import org.apache.helix.ZNRecord;

@@ -23,6 +23,7 @@
         <artifactId>pinot</artifactId>
         <groupId>com.linkedin.pinot</groupId>
         <version>0.016-SNAPSHOTS</version>
+        <relativePath>../pom4deploy.xml</relativePath>
     </parent>
     <build>
         <plugins>

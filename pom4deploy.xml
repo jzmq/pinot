@@ -469,6 +469,26 @@
                 <artifactId>socket.io-client</artifactId>
                 <version>0.5.1</version>
             </dependency>
+      <dependency>
+        <groupId>org.webjars</groupId>
+        <artifactId>swagger-ui</artifactId>
+        <version>2.1.8-M1</version>
+      </dependency>
+      <dependency>
+        <groupId>com.clearspring.analytics</groupId>
+        <artifactId>stream</artifactId>
+        <version>2.7.0</version>
+      </dependency>
+      <dependency>
+        <groupId>org.antlr</groupId>
+        <artifactId>antlr4-runtime</artifactId>
+        <version>4.3</version>
+      </dependency>
+      <dependency>
+        <groupId>org.antlr</groupId>
+        <artifactId>antlr4-annotations</artifactId>
+        <version>4.3</version>
+      </dependency>
         </dependencies>
     </dependencyManagement>
     <build>
@@ -490,7 +510,7 @@
                 <plugin>
                     <groupId>org.codehaus.mojo</groupId>
                     <artifactId>appassembler-maven-plugin</artifactId>
-                    <version>1.1.1</version>
+          <version>1.10</version>
                     <configuration>
                         <property>
                             <name>JAVA_HOME</name>
@@ -572,6 +592,16 @@
                             </goals>
                         </execution>
                     </executions>
+          <configuration>
+            <archive>
+              <manifestEntries>
+                <Implementation-Title>${project.artifactId}</Implementation-Title>
+                <Implementation-Version>${project.version}-${buildNumber}</Implementation-Version>
+                <Implementation-Vendor-Id>${project.groupId}</Implementation-Vendor-Id>
+                <Implementation-Vendor>${project.organization.name}</Implementation-Vendor>
+              </manifestEntries>
+            </archive>
+          </configuration>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>

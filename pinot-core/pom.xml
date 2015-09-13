@@ -48,7 +48,7 @@
         </plugins>
     </build>
     <artifactId>pinot-core</artifactId>
-    <version>0.016</version>
+    <version>0.016-SNAPSHOTS</version>
     <name>pinot-core</name>
     <url>http://maven.apache.org</url>
 

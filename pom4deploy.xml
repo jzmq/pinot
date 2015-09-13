@@ -21,7 +21,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.linkedin.pinot</groupId>
     <artifactId>pinot</artifactId>
-    <version>0.016-s0.1</version>
+    <version>0.016-SNAPSHOTS</version>
     <packaging>pom</packaging>
     <name>pinot</name>
     <modules>

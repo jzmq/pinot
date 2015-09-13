@@ -21,7 +21,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.linkedin.pinot</groupId>
     <artifactId>pinot</artifactId>
-    <version>0.016-SNAPSHOTS</version>
+    <version>0.016</version>
     <packaging>pom</packaging>
     <name>pinot</name>
     <modules>
@@ -743,7 +743,7 @@
                             <groupId>com.linkedin.pinot</groupId>
                             <artifactId>pinot-core</artifactId>
                             <version>${version}</version>
-                            <url>http://deployment:123456@10.10.10.242:8002/nexus/content/repositories/snapshots/</url>
+                            <url>http://deployment:123456@10.10.10.242:8002/nexus/content/repositories/releases/</url>
                             <file>${project.basedir}/pinot-core/target/pinot-core-${version}.jar</file>
                         </configuration>
                     </execution>
@@ -755,7 +755,7 @@
                         </goals>
                         <configuration>
                             <groupId>com.linkedin.pinot</groupId>
-                            <artifactId>common</artifactId>
+                            <artifactId>pinot-common</artifactId>
                             <version>${version}</version>
                             <url>http://deployment:123456@10.10.10.242:8002/nexus/content/repositories/releases/</url>
                             <file>${project.basedir}/pinot-common/target/pinot-common-${version}.jar</file>

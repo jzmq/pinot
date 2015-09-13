@@ -741,7 +741,7 @@
                         </goals>
                         <configuration>
                             <groupId>com.linkedin.pinot</groupId>
-                            <artifactId>core</artifactId>
+                            <artifactId>pinot-core</artifactId>
                             <version>${version}</version>
                             <url>http://deployment:123456@10.10.10.242:8002/nexus/content/repositories/snapshots/</url>
                             <file>${project.basedir}/pinot-core/target/pinot-core-${version}.jar</file>

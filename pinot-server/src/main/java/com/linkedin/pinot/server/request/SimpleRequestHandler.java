@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.thrift.protocol.TCompactProtocol;
 import org.slf4j.Logger;
@@ -100,6 +101,7 @@ public class SimpleRequestHandler implements RequestHandler {
         responseByte = new byte[0];
       } else {
         responseByte = instanceResponse.toBytes();
+        LOGGER.info("response is:"+instanceResponse.toString());
       }
     } catch (Exception e) {
       _serverMetrics.addMeteredValue(null, ServerMeter.RESPONSE_SERIALIZATION_EXCEPTIONS, 1);
@@ -110,6 +112,13 @@ public class SimpleRequestHandler implements RequestHandler {
     _serverMetrics.addPhaseTiming(brokerRequest, ServerQueryPhase.RESPONSE_SERIALIZATION, serializationEndTime - serializationStartTime);
     _serverMetrics.addPhaseTiming(brokerRequest, ServerQueryPhase.TOTAL_QUERY_TIME, serializationEndTime - queryStartTime);
     return responseByte;
+  }
+
+  public void asyncLog(DataTable responseDataTable){
+    DataTableBuilder.DataSchema dataSchema = responseDataTable.getDataSchema();
+    Map<String,String> metaData = responseDataTable.getMetadata();
+
+
   }
 
 }

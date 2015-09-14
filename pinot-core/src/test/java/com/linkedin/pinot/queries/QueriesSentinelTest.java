@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import com.linkedin.pinot.core.query.aggregation.function.quantile.tdigest.TDigest;
 import org.antlr.runtime.RecognitionException;
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.commons.io.FileUtils;
@@ -105,14 +104,11 @@ public class QueriesSentinelTest {
     QUERY_EXECUTOR = new ServerQueryExecutorV1Impl(false);
     QUERY_EXECUTOR.init(serverConf.subset("pinot.server.query.executor"), instanceDataManager, new ServerMetrics(
         new MetricsRegistry()));
-
-    TDigest.TEST_ENABLED = true;
   }
 
   @AfterClass
   public void tearDown() {
     FileUtils.deleteQuietly(INDEX_DIR);
-    TDigest.TEST_ENABLED = false;
   }
 
   private void runApproximationQueries(List<? extends AvroQueryGenerator.TestAggreationQuery> queries, double precision)
@@ -193,7 +189,7 @@ public class QueriesSentinelTest {
   }
 
   @Test
-  public void testQuantileNoGroupBy() throws Exception {
+  public void testPercentileNoGroupBy() throws Exception {
     final List<TestSimpleAggreationQuery> aggCalls = new ArrayList<TestSimpleAggreationQuery>();
 
     // 5 single-value columns -- column 3 is String type
@@ -206,7 +202,7 @@ public class QueriesSentinelTest {
   }
 
   @Test
-  public void testQuantileGroupBy() throws Exception {
+  public void testPercentileGroupBy() throws Exception {
     final List<TestGroupByAggreationQuery> groupByCalls = new ArrayList<TestGroupByAggreationQuery>();
     final int top = 1000;
     for (int i = 2; i <= 2; i++) {
@@ -239,7 +235,7 @@ public class QueriesSentinelTest {
       LOGGER.info("Result from avro is : " + aggCall.result);
       try {
         Assert.assertEquals(Double.parseDouble(brokerResponse.getAggregationResults().get(0).getString("value")),
-            aggCall.result);
+                aggCall.result);
       } catch (AssertionError e) {
         System.out.println(aggCall.pql);
         System.out.println("from broker : "
@@ -270,7 +266,7 @@ public class QueriesSentinelTest {
 
       try {
         assertGroupByResults(brokerResponse.getAggregationResults().get(0).getJSONArray("groupByResult"),
-            groupBy.groupResults);
+                groupBy.groupResults);
       } catch (AssertionError e) {
         System.out.println(groupBy.pql);
         System.out.println("from broker : "
@@ -417,5 +413,24 @@ public class QueriesSentinelTest {
     LOGGER.info("BrokerResponse is " + brokerResponse.getAggregationResults().get(0));
     Assert.assertEquals(brokerResponse.getAggregationResults().get(0).getInt("value"), 14);
     Assert.assertEquals(brokerResponse.getNumDocsScanned(), 14);
+  }
+
+  @Test
+  public void testTrace() throws RecognitionException, Exception {
+    String query = "select count(*) from testTable where column1='186154188'";
+    LOGGER.info("running  : " + query);
+    final Map<ServerInstance, DataTable> instanceResponseMap = new HashMap<ServerInstance, DataTable>();
+    final BrokerRequest brokerRequest = RequestConverter.fromJSON(REQUEST_COMPILER.compile(query));
+    brokerRequest.setEnableTrace(true); //
+    InstanceRequest instanceRequest = new InstanceRequest(1, brokerRequest);
+    instanceRequest.setEnableTrace(true); // TODO: add trace settings consistency
+    instanceRequest.setSearchSegments(new ArrayList<String>());
+    instanceRequest.getSearchSegments().add(segmentName);
+    final DataTable instanceResponse = QUERY_EXECUTOR.processQuery(instanceRequest);
+    instanceResponseMap.clear();
+    instanceResponseMap.put(new ServerInstance("localhost:0000"), instanceResponse);
+    final BrokerResponse brokerResponse = REDUCE_SERVICE.reduceOnDataTable(brokerRequest, instanceResponseMap);
+    LOGGER.info("BrokerResponse is " + brokerResponse.getAggregationResults().get(0));
+    LOGGER.info("TraceInfo is " + brokerResponse.getTraceInfo()); //
   }
 }

@@ -1,6 +1,5 @@
 package com.linkedin.thirdeye.anomaly.util;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -9,7 +8,6 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 
 import com.google.common.base.Joiner;
-import com.linkedin.thirdeye.api.MetricSpec;
 import com.linkedin.thirdeye.api.TimeGranularity;
 import com.linkedin.thirdeye.api.TimeRange;
 import com.linkedin.thirdeye.client.ThirdEyeRequest;
@@ -21,10 +19,12 @@ public class ThirdEyeRequestUtils {
 
   private static final Joiner COMMA = Joiner.on(",");
 
+  public static final String NULL_GROUP_BY = null;
+
   /**
    * @param collection
    * @param dimensions
-   * @param metricSpecs
+   * @param metricNames
    * @param aggregationFunction
    * @param timeRange
    * @return
@@ -35,7 +35,7 @@ public class ThirdEyeRequestUtils {
       String collection,
       String groupByDimension,
       Map<String, String> fixedDimensionValues,
-      List<MetricSpec> metricSpecs,
+      List<String> metricNames,
       TimeGranularity aggregationGranularity,
       TimeRange timeRange) throws Exception
   {
@@ -48,9 +48,9 @@ public class ThirdEyeRequestUtils {
       .setCollection(collection)
       .setStartTime(start)
       .setEndTime(end)
-      .setMetricFunction(buildMetricFunction(aggregationGranularity, metricSpecs));
+      .setMetricFunction(buildMetricFunction(aggregationGranularity, metricNames));
 
-    if (groupByDimension != null) {
+    if (groupByDimension != NULL_GROUP_BY) {
       request.setGroupBy(groupByDimension);
     }
 
@@ -61,11 +61,7 @@ public class ThirdEyeRequestUtils {
     return request;
   }
 
-  private static String buildMetricFunction(TimeGranularity aggregationGranularity, List<MetricSpec> metrics) {
-    List<String> metricNames = new ArrayList<>(metrics.size());
-    for (MetricSpec metric : metrics) {
-      metricNames.add(metric.getName());
-    }
+  private static String buildMetricFunction(TimeGranularity aggregationGranularity, List<String> metricNames) {
     return String.format("AGGREGATE_%d_%s(%s)", aggregationGranularity.getSize(),
         aggregationGranularity.getUnit().toString().toUpperCase(), COMMA.join(metricNames));
   }

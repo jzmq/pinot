@@ -121,14 +121,77 @@
             <program>
               <mainClass>com.linkedin.pinot.tools.admin.PinotAdministrator</mainClass>
               <name>pinot-admin</name>
+              <jvmSettings>
+                <initialMemorySize>1G</initialMemorySize>
+                <maxMemorySize>1G</maxMemorySize>
+                <extraArguments>
+                  <extraArgument>-Dlog4j.configuration=conf/pinot-admin-log4j.properties</extraArgument>
+                </extraArguments>
+              </jvmSettings>
+            </program>
+            <program>
+              <mainClass>com.linkedin.pinot.tools.admin.PinotAdministrator</mainClass>
+              <name>start-controller</name>
+              <commandLineArguments>
+                <commandLineArgument>StartController</commandLineArgument>
+              </commandLineArguments>
+              <jvmSettings>
+                <initialMemorySize>1G</initialMemorySize>
+                <maxMemorySize>1G</maxMemorySize>
+                <extraArguments>
+                  <extraArgument>-Dlog4j.configuration=conf/pinot-controller-log4j.properties</extraArgument>
+                </extraArguments>
+              </jvmSettings>
+            </program>
+            <program>
+              <mainClass>com.linkedin.pinot.tools.admin.PinotAdministrator</mainClass>
+              <name>start-broker</name>
+              <commandLineArguments>
+                <commandLineArgument>StartBroker</commandLineArgument>
+              </commandLineArguments>
+              <jvmSettings>
+                <initialMemorySize>1G</initialMemorySize>
+                <maxMemorySize>1G</maxMemorySize>
+                <extraArguments>
+                  <extraArgument>-Dlog4j.configuration=conf/pinot-broker-log4j.properties</extraArgument>
+                </extraArguments>
+              </jvmSettings>
+            </program>
+            <program>
+              <mainClass>com.linkedin.pinot.tools.admin.PinotAdministrator</mainClass>
+              <name>start-server</name>
+              <commandLineArguments>
+                <commandLineArgument>StartServer</commandLineArgument>
+              </commandLineArguments>
+              <jvmSettings>
+                <initialMemorySize>1G</initialMemorySize>
+                <maxMemorySize>1G</maxMemorySize>
+                <extraArguments>
+                  <extraArgument>-Dlog4j.configuration=conf/pinot-server-log4j.properties</extraArgument>
+                </extraArguments>
+              </jvmSettings>
             </program>
             <program>
               <mainClass>com.linkedin.pinot.tools.Quickstart</mainClass>
               <name>quick-start-offline</name>
+              <jvmSettings>
+                <initialMemorySize>1G</initialMemorySize>
+                <maxMemorySize>1G</maxMemorySize>
+                <extraArguments>
+                  <extraArgument>-Dlog4j.configuration=conf/quickstart-offline-log4j.properties</extraArgument>
+                </extraArguments>
+              </jvmSettings>
             </program>
             <program>
               <mainClass>com.linkedin.pinot.tools.RealtimeQuickStart</mainClass>
               <name>quick-start-realtime</name>
+              <jvmSettings>
+                <initialMemorySize>1G</initialMemorySize>
+                <maxMemorySize>1G</maxMemorySize>
+                <extraArguments>
+                  <extraArgument>-Dlog4j.configuration=quickstart-realtime-log4j.properties</extraArgument>
+                </extraArguments>
+              </jvmSettings>
             </program>
           </programs>
           <binFileExtensions>
@@ -142,8 +205,7 @@
           <!-- Include the target configuration directory in the beginning of the classpath declaration in the bin scripts -->
           <includeConfigurationDirectoryInClasspath>true</includeConfigurationDirectoryInClasspath>
           <assembleDirectory>${project.build.directory}/${project.artifactId}-pkg</assembleDirectory>
-          <!-- Extra JVM arguments that will be included in the bin scripts -->
-          <extraJvmArguments>-Xms32G -Xmx48G -Dlog4j.configuration=conf/quickstart-log4j.properties</extraJvmArguments>
+          <unixScriptTemplate>${project.basedir}/src/main/resources/appAssemblerScriptTemplate</unixScriptTemplate>
           <!-- Generate bin scripts for windows and unix pr default -->
 
           <!--<assembleDirectory>${project.build.directory}/sbin</assembleDirectory>-->

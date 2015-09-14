@@ -15,6 +15,7 @@
  */
 package com.linkedin.pinot.controller.helix.core.retention;
 
+import com.linkedin.pinot.common.config.SegmentsValidationAndRetentionConfig;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -165,30 +166,51 @@ public class RetentionManager {
   private Map<String, RetentionStrategy> handleOfflineDeletionStrategy(String offlineTableName) {
     Map<String, RetentionStrategy> tableToDeletionStrategyMap = new HashMap<String, RetentionStrategy>();
 
-    AbstractTableConfig offlineTableConfig;
     try {
-      offlineTableConfig = ZKMetadataProvider.getOfflineTableConfig(_pinotHelixResourceManager.getPropertyStore(), offlineTableName);
-    } catch (Exception e) {
-      LOGGER.error("Error getting offline table config from property store!", e);
-      return tableToDeletionStrategyMap;
-    }
+      AbstractTableConfig offlineTableConfig;
 
-    if (offlineTableConfig == null) {
-      LOGGER.info("Table config null for table: {}, treating it as refresh only table.", offlineTableName);
-      return tableToDeletionStrategyMap;
-    }
-    
-    if (offlineTableConfig.getValidationConfig().getSegmentPushType().equalsIgnoreCase("REFRESH")) {
-      LOGGER.info("Table: {} is a refresh only table.", offlineTableName);
-      return tableToDeletionStrategyMap;
-    }
-    try {
-      TimeRetentionStrategy timeRetentionStrategy = new TimeRetentionStrategy(offlineTableConfig.getValidationConfig().getRetentionTimeUnit(),
-          offlineTableConfig.getValidationConfig().getRetentionTimeValue());
+      try {
+        offlineTableConfig = ZKMetadataProvider.getOfflineTableConfig(_pinotHelixResourceManager.getPropertyStore(), offlineTableName);
+      } catch (Exception e) {
+        LOGGER.error("Error getting offline table config from property store!", e);
+        return tableToDeletionStrategyMap;
+      }
+
+      if (offlineTableConfig == null || offlineTableConfig.getValidationConfig() == null) {
+        LOGGER.info("Table config null for table: {}, treating it as refresh only table.", offlineTableName);
+        return tableToDeletionStrategyMap;
+      }
+
+      SegmentsValidationAndRetentionConfig validationConfig = offlineTableConfig.getValidationConfig();
+
+      if (validationConfig.getSegmentPushType() == null || validationConfig.getSegmentPushType().isEmpty()) {
+        LOGGER.info("Segment push type for table {} is empty, skipping retention processing", offlineTableName);
+        return tableToDeletionStrategyMap;
+      }
+
+      if ("REFRESH".equalsIgnoreCase(validationConfig.getSegmentPushType())) {
+        LOGGER.info("Table: {} is a refresh only table.", offlineTableName);
+        return tableToDeletionStrategyMap;
+      }
+
+      LOGGER.info("Building retention strategy for table {} with configuration {}", offlineTableName, validationConfig);
+
+      final String retentionTimeUnit = validationConfig.getRetentionTimeUnit();
+      final String retentionTimeValue = validationConfig.getRetentionTimeValue();
+
+      if (retentionTimeUnit == null || retentionTimeUnit.isEmpty() || retentionTimeValue == null || retentionTimeValue.isEmpty()) {
+        LOGGER.info("Table {} has an invalid retention period of {} {}, skipping", offlineTableName,
+            retentionTimeValue, retentionTimeUnit);
+        return tableToDeletionStrategyMap;
+      }
+
+      TimeRetentionStrategy timeRetentionStrategy = new TimeRetentionStrategy(retentionTimeUnit,
+          retentionTimeValue);
       tableToDeletionStrategyMap.put(offlineTableName, timeRetentionStrategy);
     } catch (Exception e) {
       LOGGER.error("Error creating TimeRetentionStrategy for table: {}", offlineTableName, e);
     }
+
     return tableToDeletionStrategyMap;
   }
 

@@ -45,6 +45,7 @@ import com.linkedin.pinot.controller.ControllerStarter;
  *
  */
 public abstract class ControllerTest {
+  protected static boolean isTraceEnabled;
   private static final Logger LOGGER = LoggerFactory.getLogger(ControllerTest.class);
   protected String CONTROLLER_BASE_API_URL = "http://localhost:" + ControllerTestUtils.DEFAULT_CONTROLLER_API_PORT;
   protected String BROKER_BASE_API_URL = "http://localhost:18099";
@@ -55,9 +56,16 @@ public abstract class ControllerTest {
   protected ZkHelixPropertyStore<ZNRecord> _propertyStore;
   protected HelixManager _helixZkManager;
 
-  public JSONObject postQuery(String query, String brokerBaseApiUrl) throws Exception {
+  public JSONObject postQuery(String query, String brokerBaseApiUrl, boolean usePql2Compiler) throws Exception {
     final JSONObject json = new JSONObject();
     json.put("pql", query);
+    json.put("trace", isTraceEnabled);
+
+    if (usePql2Compiler) {
+      json.put("dialect", "pql2");
+    } else {
+      json.put("dialect", "bql");
+    }
 
     final long start = System.currentTimeMillis();
     final URLConnection conn = new URL(brokerBaseApiUrl + "/query").openConnection();
@@ -89,7 +97,7 @@ public abstract class ControllerTest {
   }
 
   public JSONObject postQuery(String query) throws Exception {
-    return postQuery(query, BROKER_BASE_API_URL);
+    return postQuery(query, BROKER_BASE_API_URL, true);
   }
 
   protected void startZk() {

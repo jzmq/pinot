@@ -14,7 +14,13 @@
  ******************************************************************************/
 package com.linkedin.pinot.common.utils;
 
-import com.linkedin.pinot.common.Utils;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.HttpException;
 import org.apache.commons.httpclient.HttpVersion;
@@ -29,7 +35,7 @@ import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
+import com.linkedin.pinot.common.Utils;
 
 
 public class FileUploadUtils {

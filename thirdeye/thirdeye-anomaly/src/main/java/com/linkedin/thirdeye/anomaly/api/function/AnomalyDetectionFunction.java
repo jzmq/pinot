@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.Set;
 
 import com.linkedin.thirdeye.anomaly.api.FunctionProperties;
-import com.linkedin.thirdeye.anomaly.exception.IllegalFunctionException;
+import com.linkedin.thirdeye.anomaly.api.function.exception.IllegalFunctionException;
 import com.linkedin.thirdeye.api.DimensionKey;
 import com.linkedin.thirdeye.api.MetricTimeSeries;
 import com.linkedin.thirdeye.api.StarTreeConfig;
@@ -38,6 +38,12 @@ public interface AnomalyDetectionFunction {
 
   /**
    * @return
+   *  The smallest window of time that anomaly detection can run at (null indicates no restriction)
+   */
+  TimeGranularity getMinimumMonitoringIntervalTimeGranularity();
+
+  /**
+   * @return
    *  The metrics used by this function.
    */
   Set<String> getMetrics();
@@ -50,7 +56,7 @@ public interface AnomalyDetectionFunction {
    *  The dimension combination associated with the series
    * @param series
    *  The time series to be analyzed including the training data
-   * @param detectionInterval
+   * @param monitoringWindow
    *  The interval of time to produce anomalies for
    * @param anomalyHistory
    *  A list of all previous anomaly results produced by this function
@@ -59,7 +65,7 @@ public interface AnomalyDetectionFunction {
    *  The list of anomalies in the series. Anomaly results with isAnomaly set to false or not in the detectionInterval
    *  may be ignored by the driver.
    */
-  List<AnomalyResult> analyze(DimensionKey dimensionKey, MetricTimeSeries series, TimeRange detectionInterval,
+  List<AnomalyResult> analyze(DimensionKey dimensionKey, MetricTimeSeries series, TimeRange monitoringWindow,
       List<AnomalyResult> anomalyHistory);
 
 }

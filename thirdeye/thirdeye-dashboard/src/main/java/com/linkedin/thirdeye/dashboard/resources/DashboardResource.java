@@ -37,6 +37,8 @@ public class DashboardResource {
   private final QueryCache queryCache;
   private final ObjectMapper objectMapper;
   private final CustomDashboardResource customDashboardResource;
+  private final FunnelsDataProvider funnelResource;
+
   private final ConfigCache configCache;
 
   public DashboardResource(String serverUri,
@@ -45,7 +47,8 @@ public class DashboardResource {
                            QueryCache queryCache,
                            ObjectMapper objectMapper,
                            CustomDashboardResource customDashboardResource,
-                           ConfigCache configCache) {
+                           ConfigCache configCache,
+                           FunnelsDataProvider funnelResource) {
     this.serverUri = serverUri;
     this.dataCache = dataCache;
     this.queryCache = queryCache;
@@ -53,6 +56,7 @@ public class DashboardResource {
     this.customDashboardResource = customDashboardResource;
     this.feedbackEmailAddress = feedbackEmailAddress;
     this.configCache = configCache;
+    this.funnelResource = funnelResource;
   }
 
   @GET
@@ -103,7 +107,11 @@ public class DashboardResource {
       customDashboardNames = customDashboardResource.getCustomDashboardNames(collection);
     }
 
-    return new DashboardStartView(collection, schema, earliestDataTime, latestDataTime, customDashboardNames);
+    List<String> funnelNames = Collections.emptyList();
+    if(funnelResource !=null) { 
+      funnelNames = funnelResource.getFunnelNamesFor(collection);
+    }
+    return new DashboardStartView(collection, schema, earliestDataTime, latestDataTime, customDashboardNames, funnelNames);
   }
 
   @GET
@@ -173,6 +181,7 @@ public class DashboardResource {
       @Context UriInfo uriInfo) throws Exception {
     Map<String, String> dimensionValues = UriUtils.extractDimensionValues(uriInfo.getQueryParameters());
 
+
     // Check no group bys
     for (Map.Entry<String, String> entry : dimensionValues.entrySet()) {
       if ("!".equals(entry.getValue())) {
@@ -209,12 +218,28 @@ public class DashboardResource {
       customDashboardNames = customDashboardResource.getCustomDashboardNames(collection);
     }
 
+    // lets find if there are any funnels
+    List<FunnelHeatMapView> funnels = Collections.emptyList();
+    List<String> funnelNames = Collections.emptyList();
+    
+    String selectedFunnels = uriInfo.getQueryParameters().getFirst("funnels");
+    
+    
+    if (funnelResource !=null && selectedFunnels !=null && selectedFunnels.length() > 0) {
+      MultivaluedMap<String, String> filterMap = uriInfo.getQueryParameters();
+      filterMap.remove("funnels");
+      DateTime current = new DateTime(currentMillis);
+      funnels = funnelResource.computeFunnelViews(collection, selectedFunnels, current, filterMap);
+      funnelNames = funnelResource.getFunnelNamesFor(collection);
+    }
+
     try {
       View metricView = getMetricView(
           collection, metricFunction, metricViewType, baselineMillis, currentMillis, uriInfo);
 
       View dimensionView = getDimensionView(
           collection, metricFunction, dimensionViewType, baselineMillis, currentMillis, uriInfo);
+
 
       return new DashboardView(
           collection,
@@ -226,7 +251,9 @@ public class DashboardResource {
           earliestDataTime,
           latestDataTime,
           customDashboardNames,
-          feedbackEmailAddress);
+          feedbackEmailAddress,
+          funnelNames,
+          funnels);
     } catch (Exception e) {
       if (e instanceof WebApplicationException) {
         throw e;  // sends appropriate HTTP response

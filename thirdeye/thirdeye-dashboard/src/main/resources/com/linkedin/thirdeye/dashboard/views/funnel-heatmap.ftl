@@ -1,22 +1,16 @@
-
 <#if (funnelViews?size > 0)>
-<div id="collapser"><h2 style="color:#069;cursor:pointer">(-) Funnel(s)</h2></div>
+<div id="collapser"><h2>(-) Funnel(s)</h2></div>
 <div id="custom-funnels-container">
     <#list funnelViews as funnel>
         <h3 class="metric-list">
-            ${funnel.name}
+            ${funnel.name} (current = ${funnel.current} & baseline = ${funnel.baseline})
         </h3>
 
-        <div class="metric-list">
-            <#list funnel.metricIndex?keys as key> 
-                <div>${funnel.metricIndex[key]} = ${key}</div>
-            </#list> 
-        </div>
         <table class="uk-table dimension-view-heat-map-rendered">
             <tr>
                 <td class="metric-label">Hour</td>
-                <#list funnel.metricIndex?keys as key> 
-                    <td class="metric-label">${funnel.metricIndex[key]}</td>
+                <#list funnel.aliasToActualMap?keys as key> 
+                    <td class="metric-label">${key}</td>
                 </#list> 
             </tr>
             <#list funnel.table as row>
@@ -25,7 +19,8 @@
                     <#list row.second as column>
                         <#if (column??)>
                         <td
-                            class="heat-map-cell"
+                            class="heat-map-cell custom-tooltip"
+                            tooltip="${column}"
                             value="${column}"
                         >${(column * 100)?string["0.0"]}%</td>
                         <#else>
@@ -45,15 +40,15 @@
             var absValue = Math.abs(value)
 
             if (value < 0) {
-                cellObj.css('background-color', 'rgba(255,51,51,' + absValue + ')') // red
+                cellObj.css('background-color', 'rgba(255,0,0,' + absValue + ')') // red
             } else {
-                cellObj.css('background-color', 'rgba(97,114,242,' + absValue + ')') // blue
+                cellObj.css('background-color', 'rgba(0,0,255,' + absValue + ')') // blue
             }
         });
         $("#collapser").click(function () {
-            $header = $(this);
+            var $header = $(this);
             //getting the next element
-            $content = $header.next();
+            var $content = $header.next();
             //open up the content needed - toggle the slide- if visible, slide up, if not slidedown.
             $content.slideToggle(800, function () {
                $header.html(function () {

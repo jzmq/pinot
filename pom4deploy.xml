@@ -735,7 +735,7 @@
                 <executions>
                     <execution>
                         <id>PINOT_CORE_DEPLOY</id>
-                        <phase>package</phase>
+                        <phase>deploy</phase>
                         <goals>
                             <goal>deploy-file</goal>
                         </goals>
@@ -749,7 +749,7 @@
                     </execution>
                     <execution>
                         <id>PINOT_COMMON_DEPLOY</id>
-                        <phase>package</phase>
+                        <phase>deploy</phase>
                         <goals>
                             <goal>deploy-file</goal>
                         </goals>

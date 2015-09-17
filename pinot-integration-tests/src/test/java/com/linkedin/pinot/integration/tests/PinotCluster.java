@@ -16,51 +16,31 @@
 package com.linkedin.pinot.integration.tests;
 
 import com.linkedin.pinot.broker.broker.BrokerTestUtils;
-//import com.linkedin.pinot.common.ZkTestUtils;
-import com.linkedin.pinot.common.data.Schema;
-import com.linkedin.pinot.common.request.helper.ControllerRequestBuilder;
 import com.linkedin.pinot.common.utils.CommonConstants;
 import com.linkedin.pinot.common.utils.FileUploadUtils;
-import com.linkedin.pinot.common.utils.NetUtil;
 import com.linkedin.pinot.common.utils.TarGzCompressionUtils;
+import com.linkedin.pinot.common.utils.ZkStarter;
 import com.linkedin.pinot.controller.helix.ControllerRequestURLBuilder;
 import com.linkedin.pinot.controller.helix.ControllerTestUtils;
-import com.linkedin.pinot.core.data.readers.CSVRecordReaderConfig;
-import com.linkedin.pinot.core.data.readers.FileFormat;
-import com.linkedin.pinot.core.indexsegment.generator.SegmentGeneratorConfig;
-import com.linkedin.pinot.core.indexsegment.generator.SegmentVersion;
-import com.linkedin.pinot.core.indexsegment.utils.AvroUtils;
-import com.linkedin.pinot.core.segment.creator.impl.SegmentIndexCreationDriverImpl;
 import com.linkedin.pinot.server.util.ServerTestUtils;
 import com.linkedin.pinot.tools.admin.command.AbstractBaseCommand;
-import org.I0Itec.zkclient.ZkClient;
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.io.FileUtils;
-import org.apache.zookeeper.WatchedEvent;
-import org.apache.zookeeper.Watcher;
-import org.apache.zookeeper.ZooKeeper;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.json.JSONException;
-import org.json.JSONObject;
 
-import java.io.*;
-import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 
 public class PinotCluster extends ClusterTest {
-  static final String ZKString = "10.10.2.130:2181";
+  static final String ZKString = "localhost:2181";
   static final String PROJECT_ROOT = "/workspace/pinot";
   static final String HELIX_CLUSTER_NAME = "PinotTest";
 
   public PinotCluster() throws Exception {
-    SimpleZkClient zkClient = new SimpleZkClient(ZKString);
-    zkClient.createConnection();
-
-    zkClient.deletePath("/" + HELIX_CLUSTER_NAME);
+    ZkStarter.startLocalZkServer(2181);
     ControllerTestUtils.startController(HELIX_CLUSTER_NAME, ZKString, ControllerTestUtils.getDefaultControllerConfiguration());
     Configuration defaultServerConfiguration = ServerTestUtils.getDefaultServerConfiguration();
     defaultServerConfiguration.setProperty(CommonConstants.Server.CONFIG_OF_INSTANCE_READ_MODE, "mmap");

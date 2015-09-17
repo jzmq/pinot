@@ -33,14 +33,19 @@ import com.linkedin.pinot.core.indexsegment.utils.AvroUtils;
 import com.linkedin.pinot.core.segment.creator.impl.SegmentIndexCreationDriverImpl;
 import com.linkedin.pinot.server.util.ServerTestUtils;
 import com.linkedin.pinot.tools.admin.command.AbstractBaseCommand;
+import org.I0Itec.zkclient.ZkClient;
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.io.FileUtils;
+import org.apache.zookeeper.WatchedEvent;
+import org.apache.zookeeper.Watcher;
+import org.apache.zookeeper.ZooKeeper;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.*;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -48,26 +53,29 @@ import java.util.concurrent.TimeUnit;
 
 public class PinotCluster extends ClusterTest {
   static final String ZKString = "10.10.2.130:2181";
+  static final String PROJECT_ROOT = "/workspace/pinot";
+  static final String HELIX_CLUSTER_NAME = "PinotTest";
 
   public PinotCluster() throws Exception {
-//        ZkTestUtils.startLocalZkServer();
+    SimpleZkClient zkClient = new SimpleZkClient(ZKString);
+    zkClient.createConnection();
+
+    zkClient.deletePath("/" + HELIX_CLUSTER_NAME);
     ControllerTestUtils.startController(HELIX_CLUSTER_NAME, ZKString, ControllerTestUtils.getDefaultControllerConfiguration());
     Configuration defaultServerConfiguration = ServerTestUtils.getDefaultServerConfiguration();
     defaultServerConfiguration.setProperty(CommonConstants.Server.CONFIG_OF_INSTANCE_READ_MODE, "mmap");
     ServerTestUtils.startServer(HELIX_CLUSTER_NAME, ZKString, defaultServerConfiguration);
-    //BrokerTestUtils.startBroker(HELIX_CLUSTER_NAME, ZKString, BrokerTestUtils.getDefaultBrokerConfiguration());
+    BrokerTestUtils.startBroker(HELIX_CLUSTER_NAME, ZKString, BrokerTestUtils.getDefaultBrokerConfiguration());
 
     // Create a data resource
-//        createOfflineResource("MyResource", "DaysSinceEpoch", "daysSinceEpoch", 300, "DAYS");
-    //addSchema(new File("/workspace/pinot/pinot-tools/src/main/resources/sample_data/baseball.schema"), "baseball");
+    addSchema(new File(PROJECT_ROOT + "/pinot-tools/src/main/resources/sample_data/baseball/baseball.schema"), "baseball");
 
     // Add table to resource
-    //addOfflineTable("/workspace/pinot/pinot-tools/src/main/resources/sample_data/baseballTable.json");
+    addOfflineTable(PROJECT_ROOT + "/pinot-tools/src/main/resources/sample_data/baseball" +
+            "/baseballTable.json");
 
-//    Thread.sleep(10000);
-//    uploadSegment("/workspace/pinot/pinot-tools/src/main/resources/sample_data/segment");
-
-
+    Thread.sleep(10000);
+    uploadSegment(PROJECT_ROOT + "/pinot-tools/src/main/resources/sample_data/baseball/segment");
   }
 
   public void addOfflineTable(String tableJsonPath) throws JSONException, IOException {
@@ -97,11 +105,8 @@ public class PinotCluster extends ClusterTest {
     return true;
   }
 
-  public static final String HELIX_CLUSTER_NAME = "PinotTest";
-
   public static void main(String[] args) throws Exception {
     new PinotCluster();
-
   }
 
   @Override

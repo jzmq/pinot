@@ -111,67 +111,73 @@ public class PqlQueryResource extends PinotRestletResourceBase {
   }
 
   public String sendPostRaw(String urlStr, String requestStr, Map<String, String> headers) {
-    HttpURLConnection conn = null;
     try {
-      /*if (LOG.isInfoEnabled()){
-        LOGGER.info("Sending a post request to the server - " + urlStr);
-      }
-
-      if (LOG.isDebugEnabled()){
-        LOGGER.debug("The request is - " + requestStr);
-      }*/
-
-      LOGGER.info("url string passed is : " + urlStr);
-      final URL url = new URL(urlStr);
-      conn = (HttpURLConnection) url.openConnection();
-      conn.setDoOutput(true);
-      conn.setRequestMethod("POST");
-      // conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
-
-      conn.setRequestProperty("Accept-Encoding", "gzip");
-
-      final String string = requestStr;
-      final byte[] requestBytes = string.getBytes("UTF-8");
-      conn.setRequestProperty("Content-Length", String.valueOf(requestBytes.length));
-      conn.setRequestProperty("http.keepAlive", String.valueOf(true));
-      conn.setRequestProperty("default", String.valueOf(true));
-
-      if (headers != null && headers.size() > 0) {
-        final Set<Entry<String, String>> entries = headers.entrySet();
-        for (final Entry<String, String> entry : entries) {
-          conn.setRequestProperty(entry.getKey(), entry.getValue());
-        }
-      }
-
-      //GZIPOutputStream zippedOutputStream = new GZIPOutputStream(conn.getOutputStream());
-      final OutputStream os = new BufferedOutputStream(conn.getOutputStream());
-      os.write(requestBytes);
-      os.flush();
-      os.close();
-      final int responseCode = conn.getResponseCode();
-
-      /*if (LOG.isInfoEnabled()){
-        LOGGER.info("The http response code is " + responseCode);
-      }*/
-      if (responseCode != HttpURLConnection.HTTP_OK) {
-        throw new IOException("Failed : HTTP error code : " + responseCode);
-      }
-      final byte[] bytes = drain(new BufferedInputStream(conn.getInputStream()));
-
-      final String output = new String(bytes, "UTF-8");
-      /*if (LOG.isDebugEnabled()){
-        LOGGER.debug("The response from the server is - " + output);
-      }*/
-      return output;
-    } catch (final Exception ex) {
-      LOGGER.error("Caught exception while sending pql request", ex);
-      Utils.rethrowException(ex);
-      throw new AssertionError("Should not reach this");
-    } finally {
-      if (conn != null) {
-        conn.disconnect();
-      }
+      return SimpleHttpClientUtil.requestPost(urlStr,requestStr);
+    } catch (Exception e) {
+      e.printStackTrace();
+      return "";
     }
+//    HttpURLConnection conn = null;
+//    try {
+//      /*if (LOG.isInfoEnabled()){
+//        LOGGER.info("Sending a post request to the server - " + urlStr);
+//      }
+//
+//      if (LOG.isDebugEnabled()){
+//        LOGGER.debug("The request is - " + requestStr);
+//      }*/
+//
+//      LOGGER.info("url string passed is : " + urlStr);
+//      final URL url = new URL(urlStr);
+//      conn = (HttpURLConnection) url.openConnection();
+//      conn.setDoOutput(true);
+//      conn.setRequestMethod("POST");
+//      // conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+//
+//      conn.setRequestProperty("Accept-Encoding", "gzip");
+//
+//      final String string = requestStr;
+//      final byte[] requestBytes = string.getBytes("UTF-8");
+//      conn.setRequestProperty("Content-Length", String.valueOf(requestBytes.length));
+//      conn.setRequestProperty("http.keepAlive", String.valueOf(true));
+//      conn.setRequestProperty("default", String.valueOf(true));
+//
+//      if (headers != null && headers.size() > 0) {
+//        final Set<Entry<String, String>> entries = headers.entrySet();
+//        for (final Entry<String, String> entry : entries) {
+//          conn.setRequestProperty(entry.getKey(), entry.getValue());
+//        }
+//      }
+//
+//      //GZIPOutputStream zippedOutputStream = new GZIPOutputStream(conn.getOutputStream());
+//      final OutputStream os = new BufferedOutputStream(conn.getOutputStream());
+//      os.write(requestBytes);
+//      os.flush();
+//      os.close();
+//      final int responseCode = conn.getResponseCode();
+//
+//      /*if (LOG.isInfoEnabled()){
+//        LOGGER.info("The http response code is " + responseCode);
+//      }*/
+//      if (responseCode != HttpURLConnection.HTTP_OK) {
+//        throw new IOException("Failed : HTTP error code : " + responseCode);
+//      }
+//      final byte[] bytes = drain(new BufferedInputStream(conn.getInputStream()));
+//
+//      final String output = new String(bytes, "UTF-8");
+//      /*if (LOG.isDebugEnabled()){
+//        LOGGER.debug("The response from the server is - " + output);
+//      }*/
+//      return output;
+//    } catch (final Exception ex) {
+//      LOGGER.error("Caught exception while sending pql request", ex);
+//      Utils.rethrowException(ex);
+//      throw new AssertionError("Should not reach this");
+//    } finally {
+//      if (conn != null) {
+//        conn.disconnect();
+//      }
+//    }
   }
 
   byte[] drain(InputStream inputStream) throws IOException {

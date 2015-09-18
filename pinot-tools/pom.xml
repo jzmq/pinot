@@ -123,7 +123,7 @@
               <name>pinot-admin</name>
               <jvmSettings>
                 <initialMemorySize>1G</initialMemorySize>
-                <maxMemorySize>1G</maxMemorySize>
+                <maxMemorySize>5G</maxMemorySize>
                 <extraArguments>
                   <extraArgument>-Dlog4j.configuration=conf/pinot-admin-log4j.properties</extraArgument>
                 </extraArguments>
@@ -137,7 +137,7 @@
               </commandLineArguments>
               <jvmSettings>
                 <initialMemorySize>1G</initialMemorySize>
-                <maxMemorySize>1G</maxMemorySize>
+                <maxMemorySize>5G</maxMemorySize>
                 <extraArguments>
                   <extraArgument>-Dlog4j.configuration=conf/pinot-controller-log4j.properties</extraArgument>
                 </extraArguments>
@@ -151,7 +151,7 @@
               </commandLineArguments>
               <jvmSettings>
                 <initialMemorySize>1G</initialMemorySize>
-                <maxMemorySize>1G</maxMemorySize>
+                <maxMemorySize>10G</maxMemorySize>
                 <extraArguments>
                   <extraArgument>-Dlog4j.configuration=conf/pinot-broker-log4j.properties</extraArgument>
                 </extraArguments>
@@ -165,7 +165,7 @@
               </commandLineArguments>
               <jvmSettings>
                 <initialMemorySize>1G</initialMemorySize>
-                <maxMemorySize>1G</maxMemorySize>
+                <maxMemorySize>20G</maxMemorySize>
                 <extraArguments>
                   <extraArgument>-Dlog4j.configuration=conf/pinot-server-log4j.properties</extraArgument>
                 </extraArguments>

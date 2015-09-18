@@ -1,3 +1,4 @@
+JAVA_HOME=/opt/java/jdk1.8.0_60
 
 # resolve links - $0 may be a softlink
 PRG="$0"

@@ -96,7 +96,7 @@ public class SelectionOperatorUtils {
 
   public static List<String> getSelectionColumns(List<String> selectionColumns, DataSchema dataSchema) {
     if ((selectionColumns.size() == 1) && selectionColumns.get(0).equals("*")) {
-      selectionColumns.clear();
+      selectionColumns = new ArrayList<>();
       for (int i = 0; i < dataSchema.size(); ++i) {
         selectionColumns.add(dataSchema.getColumnName(i));
       }

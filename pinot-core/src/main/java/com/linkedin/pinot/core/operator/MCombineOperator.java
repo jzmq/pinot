@@ -73,7 +73,7 @@ public class MCombineOperator extends BaseOperator {
   private long _timeOutMs;
   //Make this configurable
   //These two control the parallelism on a per query basis, depending on the number of segments to process
-  private static int MAX_THREADS_PER_QUERY = 5;
+  private static int MAX_THREADS_PER_QUERY = 10;
   private static int MIN_SEGMENTS_PER_THREAD = 10;
 
   private IntermediateResultsBlock _mergedBlock;

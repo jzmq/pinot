@@ -137,6 +137,7 @@ public class FilterPlanNode implements PlanNode {
           //if the column is sorted use sorted inverted index based implementation
           baseFilterOperator = new SortedInvertedIndexBasedFilterOperator(ds);
         } else {
+          LOGGER.info(">>>>>>>>>>>Use BitmapBasedFilterOperator to filter datas...");
           baseFilterOperator = new BitmapBasedFilterOperator(ds);
           //baseFilterOperator = new ScanBasedFilterOperator(ds);
         }

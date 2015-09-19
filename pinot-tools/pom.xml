@@ -165,7 +165,7 @@
               </commandLineArguments>
               <jvmSettings>
                 <initialMemorySize>1G</initialMemorySize>
-                <maxMemorySize>20G</maxMemorySize>
+                <maxMemorySize>50G</maxMemorySize>
                 <extraArguments>
                   <extraArgument>-Dlog4j.configuration=conf/pinot-server-log4j.properties</extraArgument>
                 </extraArguments>

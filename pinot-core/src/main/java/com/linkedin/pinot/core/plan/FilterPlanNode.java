@@ -133,11 +133,13 @@ public class FilterPlanNode implements PlanNode {
       BaseFilterOperator baseFilterOperator;
 
       if (dataSourceMetadata.hasInvertedIndex()) {
+        LOGGER.info(">>>>>>>>>>>Use InvertedIndex to filter datas...");
         if (dataSourceMetadata.isSingleValue() && dataSourceMetadata.isSorted()) {
+          LOGGER.info(">>>>>>>>>>>SortedInvertedIndexBasedFilterOperator<<<<<<<<<<<<<<");
           //if the column is sorted use sorted inverted index based implementation
           baseFilterOperator = new SortedInvertedIndexBasedFilterOperator(ds);
         } else {
-          LOGGER.info(">>>>>>>>>>>Use BitmapBasedFilterOperator to filter datas...");
+          LOGGER.info(">>>>>>>>>>>BitmapBasedFilterOperator<<<<<<<<<<<<<<");
           baseFilterOperator = new BitmapBasedFilterOperator(ds);
           //baseFilterOperator = new ScanBasedFilterOperator(ds);
         }

@@ -48,14 +48,12 @@ public class PinotCluster extends ClusterTest {
     BrokerTestUtils.startBroker(HELIX_CLUSTER_NAME, ZKString, BrokerTestUtils.getDefaultBrokerConfiguration());
 
     // Create a data resource
-    addSchema(new File(PROJECT_ROOT + "/pinot-tools/src/main/resources/sample_data/baseball/baseball.schema"), "baseball");
+    addSchema(new File("/opt/pinot/audienx_index.schema.json"), "audienx_index");
 
     // Add table to resource
-    addOfflineTable(PROJECT_ROOT + "/pinot-tools/src/main/resources/sample_data/baseball" +
-            "/baseballTable.json");
+    addOfflineTable("/opt/pinot/audienx_index.table.json");
 
-    Thread.sleep(10000);
-    uploadSegment(PROJECT_ROOT + "/pinot-tools/src/main/resources/sample_data/baseball/segment");
+    uploadSegment("/opt/pinot/audienx_index");
   }
 
   public void addOfflineTable(String tableJsonPath) throws JSONException, IOException {

@@ -25,12 +25,15 @@ import com.linkedin.pinot.core.common.BlockValSet;
 import com.linkedin.pinot.core.common.FilterBlockDocIdSet;
 import com.linkedin.pinot.core.common.Predicate;
 import com.linkedin.pinot.core.operator.docidsets.AndBlockDocIdSet;
+import com.linkedin.pinot.core.operator.docidsets.BitmapAndBlockDocIdSet;
+import com.linkedin.pinot.core.operator.docidsets.BitmapDocIdSet;
 
 
 public class AndBlock extends BaseFilterBlock {
 
   final List<FilterBlockDocIdSet> blockDocIdSets;
   public AndBlockDocIdSet andBlockDocIdSet;
+  public BitmapAndBlockDocIdSet bitmapAndBlockDocIdSet;
 
   public AndBlock(List<FilterBlockDocIdSet> blockDocIdSets) {
     this.blockDocIdSets = blockDocIdSets;
@@ -48,8 +51,19 @@ public class AndBlock extends BaseFilterBlock {
 
   @Override
   public FilterBlockDocIdSet getFilteredBlockDocIdSet() {
-    andBlockDocIdSet = new AndBlockDocIdSet(blockDocIdSets);
-    return andBlockDocIdSet;
+    boolean allBitmapBlockDocIdSet = true;
+    for(FilterBlockDocIdSet blockDocIdSet : blockDocIdSets) {
+      if (!(blockDocIdSet instanceof BitmapDocIdSet)) {
+        allBitmapBlockDocIdSet = false;
+      }
+    }
+    if (allBitmapBlockDocIdSet) {
+      bitmapAndBlockDocIdSet = new BitmapAndBlockDocIdSet(blockDocIdSets);
+      return bitmapAndBlockDocIdSet;
+    }else {
+      andBlockDocIdSet = new AndBlockDocIdSet(blockDocIdSets);
+      return andBlockDocIdSet;
+    }
   }
 
   @Override

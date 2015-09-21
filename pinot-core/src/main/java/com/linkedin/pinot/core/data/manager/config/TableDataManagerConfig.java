@@ -102,6 +102,7 @@ public class TableDataManagerConfig {
   public void overrideConfigs(AbstractTableConfig tableConfig) {
     _tableDataManagerConfig.setProperty(READ_MODE, tableConfig.getIndexingConfig().getLoadMode().toLowerCase());
     _tableDataManagerConfig.setProperty(TABLE_DATA_MANAGER_NAME, tableConfig.getTableName());
+    _tableDataManagerConfig.setProperty("metadata.loading.inverted.index.columns", tableConfig.getIndexingConfig().getInvertedIndexColumns());
   }
 
   public IndexLoadingConfigMetadata getIndexLoadingConfigMetadata() {

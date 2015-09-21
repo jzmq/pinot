@@ -24,13 +24,14 @@ import com.linkedin.pinot.core.common.BlockMetadata;
 import com.linkedin.pinot.core.common.BlockValSet;
 import com.linkedin.pinot.core.common.FilterBlockDocIdSet;
 import com.linkedin.pinot.core.common.Predicate;
-import com.linkedin.pinot.core.operator.docidsets.OrBlockDocIdSet;
+import com.linkedin.pinot.core.operator.docidsets.*;
 
 
 public class OrBlock extends BaseFilterBlock {
 
   final List<FilterBlockDocIdSet> blockDocIdSets;
   public OrBlockDocIdSet orBlockDocIdSet;
+  public BitmapOrBlockDocIdSet bitmapOrBlockDocIdSet;
 
   public OrBlock(List<FilterBlockDocIdSet> blockDocIdSets) {
     this.blockDocIdSets = blockDocIdSets;
@@ -48,8 +49,19 @@ public class OrBlock extends BaseFilterBlock {
 
   @Override
   public FilterBlockDocIdSet getFilteredBlockDocIdSet() {
-    orBlockDocIdSet = new OrBlockDocIdSet(blockDocIdSets);
-    return orBlockDocIdSet;
+    boolean allBitmapBlockDocIdSet = true;
+    for(FilterBlockDocIdSet blockDocIdSet : blockDocIdSets) {
+      if (!(blockDocIdSet instanceof BitmapDocIdSet)) {
+        allBitmapBlockDocIdSet = false;
+      }
+    }
+    if (allBitmapBlockDocIdSet) {
+      bitmapOrBlockDocIdSet = new BitmapOrBlockDocIdSet(blockDocIdSets);
+      return bitmapOrBlockDocIdSet;
+    }else {
+      orBlockDocIdSet = new OrBlockDocIdSet(blockDocIdSets);
+      return orBlockDocIdSet;
+    }
   }
 
   @Override

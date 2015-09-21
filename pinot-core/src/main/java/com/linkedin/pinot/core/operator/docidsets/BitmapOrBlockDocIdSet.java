@@ -23,6 +23,7 @@ import com.linkedin.pinot.core.operator.filter.AndOperator;
 import com.linkedin.pinot.core.operator.filter.utils.BitmapUtils;
 import org.roaringbitmap.IntIterator;
 import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
+import org.roaringbitmap.buffer.MutableRoaringBitmap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,7 +31,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 
 
-public final class BitmapAndBlockDocIdSet implements FilterBlockDocIdSet {
+public final class BitmapOrBlockDocIdSet implements FilterBlockDocIdSet {
   /**
    *
    */
@@ -39,86 +40,21 @@ public final class BitmapAndBlockDocIdSet implements FilterBlockDocIdSet {
   private List<FilterBlockDocIdSet> blockDocIdSets;
   private int minDocId = Integer.MIN_VALUE;
   private int maxDocId = Integer.MAX_VALUE;
-  private int rawSize = 0;
+  private int rawSize = 1;
   BitmapBasedBlockIdSetIterator bitmapBasedBlockIdSetIterator;
 
-  public BitmapAndBlockDocIdSet(List<FilterBlockDocIdSet> blockDocIdSets) {
+  public BitmapOrBlockDocIdSet(List<FilterBlockDocIdSet> blockDocIdSets) {
     this.blockDocIdSets = blockDocIdSets;
 
-    List<List<ImmutableRoaringBitmap>> tmpList = new ArrayList<>();
-    List<IntIterator> iteratorList = new ArrayList<>();
+    List<ImmutableRoaringBitmap> tmpList = new ArrayList<>();
     for (int i = 0; i < blockDocIdSets.size(); i++) {
-      tmpList.add(Arrays.asList(blockDocIdSets.get(i).getRaw()));
+      tmpList.addAll(Arrays.asList(blockDocIdSets.get(i).getRaw()));
     }
-
-    for( List<ImmutableRoaringBitmap> aaa : cross(tmpList)) {
-      iteratorList.add(BitmapUtils.fastBitmapsAnd(
-              aaa.toArray(new ImmutableRoaringBitmap[aaa.size()])).getIntIterator());
-    }
-    rawSize = iteratorList.size();
-    bitmapBasedBlockIdSetIterator = new BitmapBasedBlockIdSetIterator(
-            iteratorList.toArray(new IntIterator[iteratorList.size()]));
+    MutableRoaringBitmap mergedBitmap = BitmapUtils.fastBitmapOr(tmpList.toArray(new
+            ImmutableRoaringBitmap[tmpList.size()]));
+    IntIterator[] iterators = {mergedBitmap.getIntIterator()};
+    bitmapBasedBlockIdSetIterator = new BitmapBasedBlockIdSetIterator(iterators);
     updateMinMaxRange();
-  }
-
-  /**
-   * 产生笛卡尔积组合.
-   *
-   * @param crossArgs 信息组合。
-   *  <pre>
-   *  格式：{
-   *          { 1, 2, 3 },
-   *          { a, b, c, d },
-   *          { A, B, C },
-   *          ...
-   *    }
-   * </pre>
-   * @return 笛卡尔积组合结果
-   */
-  public static List<List<ImmutableRoaringBitmap>> cross(List<List<ImmutableRoaringBitmap>> crossArgs) {
-
-    // 计算出笛卡尔积行数
-    int rows = crossArgs.size() > 0 ? 1 : 0;
-
-    for (List<?> data : crossArgs) {
-      rows *= data.size();
-    }
-
-    // 笛卡尔积索引记录
-    int[] record = new int[crossArgs.size()];
-
-    List<List<ImmutableRoaringBitmap>> results = new ArrayList<List<ImmutableRoaringBitmap>>();
-
-    // 产生笛卡尔积
-    for (int i = 0; i < rows; i++) {
-      List<ImmutableRoaringBitmap> row = new ArrayList();
-
-      // 生成笛卡尔积的每组数据
-      for (int index = 0; index < record.length; index++) {
-        row.add(crossArgs.get(index).get(record[index]));
-      }
-
-      results.add(row);
-      crossRecord(crossArgs, record, crossArgs.size() - 1);
-    }
-
-    return results;
-  }
-
-  /**
-   * 产生笛卡尔积当前行索引记录.
-   *
-   * @param sourceArgs 要产生笛卡尔积的源数据
-   * @param record     每行笛卡尔积的索引组合
-   * @param level      索引组合的当前计算层级
-   */
-  private static void crossRecord(List<List<ImmutableRoaringBitmap>> sourceArgs, int[] record, int level) {
-    record[level] = record[level] + 1;
-
-    if (record[level] >= sourceArgs.get(level).size() && level > 0) {
-      record[level] = 0;
-      crossRecord(sourceArgs, record, level - 1);
-    }
   }
 
   private void updateMinMaxRange() {

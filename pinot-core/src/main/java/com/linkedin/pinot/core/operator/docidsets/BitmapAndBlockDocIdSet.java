@@ -23,6 +23,7 @@ import com.linkedin.pinot.core.operator.filter.AndOperator;
 import com.linkedin.pinot.core.operator.filter.utils.BitmapUtils;
 import org.roaringbitmap.IntIterator;
 import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
+import org.roaringbitmap.buffer.MutableRoaringBitmap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,19 +42,29 @@ public final class BitmapAndBlockDocIdSet implements FilterBlockDocIdSet {
   private int maxDocId = Integer.MAX_VALUE;
   private int rawSize = 0;
   BitmapBasedBlockIdSetIterator bitmapBasedBlockIdSetIterator;
-
+  List<MutableRoaringBitmap> mergedSet = new ArrayList<>();
   public BitmapAndBlockDocIdSet(List<FilterBlockDocIdSet> blockDocIdSets) {
     this.blockDocIdSets = blockDocIdSets;
 
     List<List<ImmutableRoaringBitmap>> tmpList = new ArrayList<>();
     List<IntIterator> iteratorList = new ArrayList<>();
     for (int i = 0; i < blockDocIdSets.size(); i++) {
-      tmpList.add(Arrays.asList(blockDocIdSets.get(i).getRaw()));
+      FilterBlockDocIdSet tmpSet = blockDocIdSets.get(i);
+//      tmpList.add(Arrays.asList(blockDocIdSets.get(i).getRaw()));
+      if(tmpSet instanceof BitmapDocIdSet) {
+
+        tmpList.add(Arrays.asList(blockDocIdSets.get(i).getRaw()));
+      }else if(tmpSet instanceof BitmapAndBlockDocIdSet){
+        tmpList.add(tmpSet.getRaw());
+      }else {
+        LOGGER.error("not supported!");
+      }
     }
 
     for( List<ImmutableRoaringBitmap> aaa : cross(tmpList)) {
-      iteratorList.add(BitmapUtils.fastBitmapsAnd(
-              aaa.toArray(new ImmutableRoaringBitmap[aaa.size()])).getIntIterator());
+      MutableRoaringBitmap bbb = BitmapUtils.fastBitmapsAnd(aaa.toArray(new ImmutableRoaringBitmap[aaa.size()]));
+      mergedSet.add(bbb);
+      iteratorList.add(bbb.getIntIterator());
     }
     rawSize = iteratorList.size();
     bitmapBasedBlockIdSetIterator = new BitmapBasedBlockIdSetIterator(
@@ -138,7 +149,7 @@ public final class BitmapAndBlockDocIdSet implements FilterBlockDocIdSet {
   @SuppressWarnings("unchecked")
   @Override
   public <T> T getRaw() {
-    return (T) this.blockDocIdSets;
+    return (T) this.mergedSet;
   }
 
   @Override

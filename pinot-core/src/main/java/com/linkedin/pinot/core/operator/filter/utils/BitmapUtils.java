@@ -70,7 +70,7 @@ public class BitmapUtils {
       }
     }
     long end = System.currentTimeMillis();
-    LOGGER.info("And operator took: " + (end - start));
+//    LOGGER.info("And operator took: " + (end - start));
 
     return answer;
   }
@@ -114,7 +114,7 @@ public class BitmapUtils {
     }
     long end = System.currentTimeMillis();
 
-    LOGGER.info("time taken for fast Or : " + (end - start));
+//    LOGGER.info("time taken for fast Or : " + (end - start));
     return answer;
   }
 

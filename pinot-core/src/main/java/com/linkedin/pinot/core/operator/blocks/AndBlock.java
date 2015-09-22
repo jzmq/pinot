@@ -15,18 +15,12 @@
  */
 package com.linkedin.pinot.core.operator.blocks;
 
-import java.util.List;
-
-import com.linkedin.pinot.core.common.BaseFilterBlock;
-import com.linkedin.pinot.core.common.BlockDocIdValueSet;
-import com.linkedin.pinot.core.common.BlockId;
-import com.linkedin.pinot.core.common.BlockMetadata;
-import com.linkedin.pinot.core.common.BlockValSet;
-import com.linkedin.pinot.core.common.FilterBlockDocIdSet;
-import com.linkedin.pinot.core.common.Predicate;
+import com.linkedin.pinot.core.common.*;
 import com.linkedin.pinot.core.operator.docidsets.AndBlockDocIdSet;
 import com.linkedin.pinot.core.operator.docidsets.BitmapAndBlockDocIdSet;
-import com.linkedin.pinot.core.operator.docidsets.BitmapDocIdSet;
+import com.linkedin.pinot.core.operator.filter.utils.BlockDocIdSetUtils;
+
+import java.util.List;
 
 
 public class AndBlock extends BaseFilterBlock {
@@ -53,7 +47,7 @@ public class AndBlock extends BaseFilterBlock {
   public FilterBlockDocIdSet getFilteredBlockDocIdSet() {
     boolean allBitmapBlockDocIdSet = true;
     for(FilterBlockDocIdSet blockDocIdSet : blockDocIdSets) {
-      if (!(blockDocIdSet instanceof BitmapDocIdSet)) {
+      if (!BlockDocIdSetUtils.isBitmapSet(blockDocIdSet)) {
         allBitmapBlockDocIdSet = false;
       }
     }

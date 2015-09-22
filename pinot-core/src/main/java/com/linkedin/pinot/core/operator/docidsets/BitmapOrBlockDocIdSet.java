@@ -42,15 +42,23 @@ public final class BitmapOrBlockDocIdSet implements FilterBlockDocIdSet {
   private int maxDocId = Integer.MAX_VALUE;
   private int rawSize = 1;
   BitmapBasedBlockIdSetIterator bitmapBasedBlockIdSetIterator;
-
+  MutableRoaringBitmap mergedBitmap;
   public BitmapOrBlockDocIdSet(List<FilterBlockDocIdSet> blockDocIdSets) {
     this.blockDocIdSets = blockDocIdSets;
 
     List<ImmutableRoaringBitmap> tmpList = new ArrayList<>();
     for (int i = 0; i < blockDocIdSets.size(); i++) {
-      tmpList.addAll(Arrays.asList(blockDocIdSets.get(i).getRaw()));
+      FilterBlockDocIdSet tmpSet = blockDocIdSets.get(i);
+      //tmpList.addAll(Arrays.asList(blockDocIdSets.get(i).getRaw()));
+      if(tmpSet instanceof BitmapDocIdSet) {
+        tmpList.addAll(Arrays.asList(blockDocIdSets.get(i).getRaw()));
+      }else if(tmpSet instanceof BitmapAndBlockDocIdSet){
+        tmpList.addAll(tmpSet.getRaw());
+      }else if(tmpSet instanceof BitmapOrBlockDocIdSet) {
+        tmpList.add(tmpSet.getRaw());
+      }
     }
-    MutableRoaringBitmap mergedBitmap = BitmapUtils.fastBitmapOr(tmpList.toArray(new
+    mergedBitmap = BitmapUtils.fastBitmapOr(tmpList.toArray(new
             ImmutableRoaringBitmap[tmpList.size()]));
     IntIterator[] iterators = {mergedBitmap.getIntIterator()};
     bitmapBasedBlockIdSetIterator = new BitmapBasedBlockIdSetIterator(iterators);
@@ -74,7 +82,7 @@ public final class BitmapOrBlockDocIdSet implements FilterBlockDocIdSet {
   @SuppressWarnings("unchecked")
   @Override
   public <T> T getRaw() {
-    return (T) this.blockDocIdSets;
+    return (T) this.mergedBitmap;
   }
 
   @Override

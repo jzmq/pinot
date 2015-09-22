@@ -50,11 +50,9 @@ public final class BitmapOrBlockDocIdSet implements FilterBlockDocIdSet {
     for (int i = 0; i < blockDocIdSets.size(); i++) {
       FilterBlockDocIdSet tmpSet = blockDocIdSets.get(i);
       //tmpList.addAll(Arrays.asList(blockDocIdSets.get(i).getRaw()));
-      if(tmpSet instanceof BitmapDocIdSet) {
+      if (tmpSet instanceof BitmapDocIdSet) {
         tmpList.addAll(Arrays.asList(blockDocIdSets.get(i).getRaw()));
-      }else if(tmpSet instanceof BitmapAndBlockDocIdSet){
-        tmpList.addAll(tmpSet.getRaw());
-      }else if(tmpSet instanceof BitmapOrBlockDocIdSet) {
+      } else {
         tmpList.add(tmpSet.getRaw());
       }
     }

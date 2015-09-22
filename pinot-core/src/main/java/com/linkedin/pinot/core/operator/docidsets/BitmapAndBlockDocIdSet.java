@@ -42,30 +42,24 @@ public final class BitmapAndBlockDocIdSet implements FilterBlockDocIdSet {
   private int maxDocId = Integer.MAX_VALUE;
   private int rawSize = 0;
   BitmapBasedBlockIdSetIterator bitmapBasedBlockIdSetIterator;
-  List<MutableRoaringBitmap> mergedSet = new ArrayList<>();
+  MutableRoaringBitmap mergedSet;
   public BitmapAndBlockDocIdSet(List<FilterBlockDocIdSet> blockDocIdSets) {
     this.blockDocIdSets = blockDocIdSets;
 
-    List<List<ImmutableRoaringBitmap>> tmpList = new ArrayList<>();
+    List<ImmutableRoaringBitmap> tmpList = new ArrayList<>();
     List<IntIterator> iteratorList = new ArrayList<>();
     for (int i = 0; i < blockDocIdSets.size(); i++) {
       FilterBlockDocIdSet tmpSet = blockDocIdSets.get(i);
-//      tmpList.add(Arrays.asList(blockDocIdSets.get(i).getRaw()));
       if(tmpSet instanceof BitmapDocIdSet) {
-
-        tmpList.add(Arrays.asList(blockDocIdSets.get(i).getRaw()));
+        tmpList.add(BitmapUtils.fastBitmapOr(blockDocIdSets.get(i).getRaw()));
       }else if(tmpSet instanceof BitmapAndBlockDocIdSet){
         tmpList.add(tmpSet.getRaw());
       }else {
         LOGGER.error("not supported!");
       }
     }
-
-    for( List<ImmutableRoaringBitmap> aaa : cross(tmpList)) {
-      MutableRoaringBitmap bbb = BitmapUtils.fastBitmapsAnd(aaa.toArray(new ImmutableRoaringBitmap[aaa.size()]));
-      mergedSet.add(bbb);
-      iteratorList.add(bbb.getIntIterator());
-    }
+    mergedSet = BitmapUtils.fastBitmapsAnd(tmpList.toArray(new ImmutableRoaringBitmap[tmpList.size()]));
+    iteratorList.add(mergedSet.getIntIterator());
     rawSize = iteratorList.size();
     bitmapBasedBlockIdSetIterator = new BitmapBasedBlockIdSetIterator(
             iteratorList.toArray(new IntIterator[iteratorList.size()]));

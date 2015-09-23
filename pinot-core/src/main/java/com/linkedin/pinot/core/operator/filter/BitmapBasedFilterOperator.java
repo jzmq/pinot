@@ -15,6 +15,7 @@
  */
 package com.linkedin.pinot.core.operator.filter;
 
+import com.linkedin.pinot.core.segment.index.data.source.DictionaryIdFilterUtils;
 import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,13 +57,18 @@ public class BitmapBasedFilterOperator extends BaseFilterOperator {
     InvertedIndexReader invertedIndex = dataSource.getInvertedIndex();
     Block dataSourceBlock = dataSource.nextBlock();
     Dictionary dictionary = dataSource.getDictionary();
-    PredicateEvaluator evaluator = PredicateEvaluatorProvider.getPredicateFunctionFor(predicate, dictionary);
-    int[] dictionaryIds = evaluator.getDictionaryIds();
-    ImmutableRoaringBitmap[] bitmaps = new ImmutableRoaringBitmap[dictionaryIds.length];
-    for (int i = 0; i < dictionaryIds.length; i++) {
-      bitmaps[i] = invertedIndex.getImmutable(dictionaryIds[i]);
-    }
+
+    ImmutableRoaringBitmap result = DictionaryIdFilterUtils.filter2(predicate, invertedIndex, dictionary, null);
+    ImmutableRoaringBitmap[] bitmaps = new ImmutableRoaringBitmap[1];
+    bitmaps[0] = result;
     bitmapBlock = new BitmapBlock(dataSourceBlock.getMetadata(), bitmaps);
+//    PredicateEvaluator evaluator = PredicateEvaluatorProvider.getPredicateFunctionFor(predicate, dictionary);
+//    int[] dictionaryIds = evaluator.getDictionaryIds();
+//    ImmutableRoaringBitmap[] bitmaps = new ImmutableRoaringBitmap[dictionaryIds.length];
+//    for (int i = 0; i < dictionaryIds.length; i++) {
+//      bitmaps[i] = invertedIndex.getImmutable(dictionaryIds[i]);
+//    }
+//    bitmapBlock = new BitmapBlock(dataSourceBlock.getMetadata(), bitmaps);
     return bitmapBlock;
   }
 

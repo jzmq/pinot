@@ -762,7 +762,7 @@
                         </configuration>
                     </execution>
                     <execution>
-                        <id>PINOT_COMMON_DEPLOY</id>
+                        <id>PINOT_API_DEPLOY</id>
                         <phase>deploy</phase>
                         <goals>
                             <goal>deploy-file</goal>
@@ -776,7 +776,7 @@
                         </configuration>
                     </execution>
                     <execution>
-                        <id>PINOT_COMMON_DEPLOY</id>
+                        <id>PINOT_HADOOP_DEPLOY</id>
                         <phase>deploy</phase>
                         <goals>
                             <goal>deploy-file</goal>

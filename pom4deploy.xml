@@ -772,7 +772,7 @@
                             <artifactId>pinot-api</artifactId>
                             <version>${version}</version>
                             <url>http://deployment:123456@10.10.10.242:8002/nexus/content/repositories/releases/</url>
-                            <file>${project.basedir}/pinot-common/target/pinot-api-${version}.jar</file>
+                            <file>${project.basedir}/pinot-api/target/pinot-api-${version}.jar</file>
                         </configuration>
                     </execution>
                     <execution>
@@ -786,7 +786,7 @@
                             <artifactId>pinot-hadoop</artifactId>
                             <version>${version}</version>
                             <url>http://deployment:123456@10.10.10.242:8002/nexus/content/repositories/releases/</url>
-                            <file>${project.basedir}/pinot-common/target/pinot-hadoop-${version}.jar</file>
+                            <file>${project.basedir}/pinot-hadoop/target/pinot-hadoop-${version}.jar</file>
                         </configuration>
                     </execution>
                 </executions>

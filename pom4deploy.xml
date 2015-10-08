@@ -863,4 +863,13 @@
         </profile>
         <!-- Configuration for unit/integration tests section 3 of 3 (profiles) ENDS HERE.-->
     </profiles>
+    <distributionManagement>
+        <repository>
+            <uniqueVersion>false</uniqueVersion>
+            <id>test-nexus</id>
+            <name>Test-Nexus</name>
+            <url>http://deployment:123456@10.10.10.242:8002/nexus/content/repositories/releases/</url>
+            <layout>default</layout>
+        </repository>
+    </distributionManagement>
 </project>

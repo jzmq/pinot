@@ -761,6 +761,34 @@
                             <file>${project.basedir}/pinot-common/target/pinot-common-${version}.jar</file>
                         </configuration>
                     </execution>
+                    <execution>
+                        <id>PINOT_COMMON_DEPLOY</id>
+                        <phase>deploy</phase>
+                        <goals>
+                            <goal>deploy-file</goal>
+                        </goals>
+                        <configuration>
+                            <groupId>com.linkedin.pinot</groupId>
+                            <artifactId>pinot-api</artifactId>
+                            <version>${version}</version>
+                            <url>http://deployment:123456@10.10.10.242:8002/nexus/content/repositories/releases/</url>
+                            <file>${project.basedir}/pinot-common/target/pinot-api-${version}.jar</file>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>PINOT_COMMON_DEPLOY</id>
+                        <phase>deploy</phase>
+                        <goals>
+                            <goal>deploy-file</goal>
+                        </goals>
+                        <configuration>
+                            <groupId>com.linkedin.pinot</groupId>
+                            <artifactId>pinot-hadoop</artifactId>
+                            <version>${version}</version>
+                            <url>http://deployment:123456@10.10.10.242:8002/nexus/content/repositories/releases/</url>
+                            <file>${project.basedir}/pinot-common/target/pinot-hadoop-${version}.jar</file>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
         </plugins>
